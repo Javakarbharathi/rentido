@@ -82,7 +82,8 @@ rentido_backend/
 │   ├── rentals/
 │   ├── payments/
 │   ├── inspections/
-│   └── logistics/
+│   ├── logistics/
+│   └── services/
 └── common/
 --------------------------------------------------------------------------------
 
@@ -119,11 +120,11 @@ Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals payments inspections logistics
+..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals payments inspections logistics services
 ..\.venv\Scripts\python manage.py migrate
 
 Expected Result:
-All migrations applied (OK) across all domain apps.
+All migrations applied (OK) across all 9 domain apps.
 --------------------------------------------------------------------------------
 
 ================================================================================
@@ -296,32 +297,52 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 18: EXECUTE COMPREHENSIVE AUTOMATED TEST SUITE (19/19 PASS)
+STEP 18: RENTIDO SERVICES & REPAIR MARKETPLACE
 ================================================================================
-Purpose: Run full automated test coverage across all domain apps on MySQL.
+Purpose: Connect damaged assets to verified repair service providers (cameras,
+laptops, bikes, furniture, electronics), submit repair quotes, and restore assets
+back to AVAILABLE status upon post-repair inspection.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/providers/                             -> Public search for verified service providers (category, city)
+- POST /api/providers/                             -> Register as Service Provider (auto-assigns SERVICE_PROVIDER role)
+- POST /api/providers/{id}/verify/                 -> Admin verify service provider
+- GET  /api/repair-requests/                       -> List repair requests
+- POST /api/repair-requests/                       -> Create service/repair request for an asset
+- POST /api/repair-requests/{id}/submit-quote/     -> Provider submits quote (with commission split calculation)
+- POST /api/repair-requests/{id}/approve-quote/    -> Owner approves quote (moves asset to MAINTENANCE)
+- POST /api/repair-requests/{id}/complete-repair/  -> Provider marks repair completed
+- POST /api/repair-requests/{id}/inspect-and-close/-> Owner/Admin closes job and restores asset to AVAILABLE
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 19: EXECUTE COMPREHENSIVE AUTOMATED TEST SUITE (21/21 PASS)
+================================================================================
+Purpose: Run full automated test coverage across all 9 domain apps on MySQL.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics apps.services
 
 Expected Result:
-Ran 19 tests in ~28s ... OK
+Ran 21 tests in ~33s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 19: COMMIT AND SYNC PHASE 4 TO GITHUB
+STEP 20: COMMIT AND SYNC PHASE 5 TO GITHUB
 ================================================================================
-Purpose: Stage and commit Rental Extensions, Agreements, and Addendums to the
-remote GitHub repository.
+Purpose: Stage and commit Services, Repair marketplace, Quotes, and Asset
+maintenance workflow to the remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement rental extension engine, owner approvals, and agreement addendums"
+git commit -m "feat: implement Rentido services and repair marketplace engine"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Phase 4 deliverables.
+GitHub repository synchronized with Phase 5 deliverables.
 --------------------------------------------------------------------------------
