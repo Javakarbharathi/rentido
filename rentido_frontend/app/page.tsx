@@ -132,9 +132,25 @@ export default function Home() {
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
   const [isOwnerStudioOpen, setIsOwnerStudioOpen] = useState(false);
 
-  // User state
+  // User state with localStorage persistence
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string>('');
+
+  // Hydrate user session from localStorage on initial mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const savedToken = localStorage.getItem('rentido_token');
+        const savedUser = localStorage.getItem('rentido_user');
+        if (savedToken && savedUser) {
+          setToken(savedToken);
+          setUser(JSON.parse(savedUser));
+        }
+      } catch (err) {
+        console.error('Failed to restore auth session from localStorage', err);
+      }
+    }
+  }, []);
 
   const loadData = async () => {
     const cityQuery = selectedCity === 'All Cities' ? undefined : selectedCity;
@@ -164,11 +180,19 @@ export default function Home() {
   const handleLoginSuccess = (userData: any, accessToken: string) => {
     setUser(userData);
     setToken(accessToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('rentido_token', accessToken);
+      localStorage.setItem('rentido_user', JSON.stringify(userData));
+    }
   };
 
   const handleLogout = () => {
     setUser(null);
     setToken('');
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('rentido_token');
+      localStorage.removeItem('rentido_user');
+    }
   };
 
   return (

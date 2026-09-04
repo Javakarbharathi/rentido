@@ -16,8 +16,11 @@ export default function TrustBadgeModal({ isOpen, onClose, user }: TrustBadgeMod
   const tier = score >= 650 ? 'Platinum' : score >= 400 ? 'Gold' : score >= 150 ? 'Silver' : 'Bronze';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto cursor-pointer"
+    >
+      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-8 cursor-default">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gradient-to-r from-amber-500/10 via-indigo-50 to-white">
@@ -31,6 +34,7 @@ export default function TrustBadgeModal({ isOpen, onClose, user }: TrustBadgeMod
             </div>
           </div>
           <button 
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:text-gray-900 cursor-pointer"
           >

@@ -1,6 +1,8 @@
 // Rentido Backend API Service Connector
 
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api';
+export const API_BASE_URL = typeof window !== 'undefined' 
+  ? '/api' 
+  : (process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000/api');
 
 export interface Category {
   id: number;
@@ -89,12 +91,26 @@ export async function validateCoupon(
 }
 
 export async function loginUser(email: string, password: string) {
-  const res = await fetch(`${API_BASE_URL}/auth/login/`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  });
-  return await res.json();
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/login/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const data = await res.json().catch(() => ({ detail: 'Invalid response from server' }));
+    if (!res.ok) {
+      return {
+        error: true,
+        detail: data.detail || data.non_field_errors?.[0] || 'Invalid email or password',
+      };
+    }
+    return data;
+  } catch (err: any) {
+    return {
+      error: true,
+      detail: 'Network error: could not connect to authentication server. Please verify backend service is running.',
+    };
+  }
 }
 
 export async function fetchTrustProfile(token: string) {

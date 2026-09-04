@@ -15,8 +15,11 @@ export default function DashboardModal({ isOpen, onClose, user }: DashboardModal
   const [activeTab, setActiveTab] = useState<'rentals' | 'referrals' | 'trust'>('rentals');
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
-      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-8 animate-in fade-in zoom-in-95 duration-200">
+    <div 
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto cursor-pointer"
+    >
+      <div className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden my-8 cursor-default">
         
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-gray-100 bg-gray-50/50">
@@ -25,6 +28,7 @@ export default function DashboardModal({ isOpen, onClose, user }: DashboardModal
             <h2 className="text-lg font-black text-gray-950 mt-0.5">Welcome, {user?.email || 'Member'}</h2>
           </div>
           <button 
+            type="button"
             onClick={onClose}
             className="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center text-gray-700 hover:text-gray-900 cursor-pointer"
           >

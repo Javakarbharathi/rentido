@@ -866,7 +866,71 @@ npm run build
 
 Expected Result:
 52/52 backend tests pass with 100% integrity. Next.js production build succeeds with 0 errors.
---------------------------------------------------------------------------------
+================================================================================
+STEP 42: BUG & ERROR RESOLUTION: SIGN-IN BUTTON & AUTHENTICATION FLOW
+================================================================================
+Reported Issue:
+"sign in button not working" - Clicking the Sign In button in the navigation header
+either failed to authenticate, did not dismiss modals, reset login session on refresh,
+or failed cross-origin requests when accessing the application.
+
+Root Cause Analysis:
+1. Trailing Slash & HTTP 308/301 Infinite Redirect Loop:
+   - Next.js Turbopack dev server by default enforces URL canonicalization by stripping
+     trailing slashes (redirecting `/api/auth/login/` -> `/api/auth/login` via HTTP 308).
+   - Simultaneously, Django REST framework endpoints and `APPEND_SLASH=True` expect
+     trailing slashes, redirecting `/api/auth/login` back to `/api/auth/login/` via HTTP 301.
+   - This caused POST /api/auth/login/ to trigger an infinite redirect cycle (or strip POST body),
+     preventing authentication from completing.
+2. Cross-Origin and Private Network Access (PNA) Mismatch:
+   - When users browsed the app via network IP (e.g. `http://192.168.56.1:3000`), client-side
+     fetch calls to hardcoded `http://127.0.0.1:8000/api` were blocked by browser CORS and
+     Chrome's Private Network Access security restrictions.
+   - Next.js dev server also logged `Blocked cross-origin request to Next.js dev resource /_next/hmr from "192.168.56.1"`.
+3. Ephemeral React State (No Session Persistence):
+   - User profile and JWT access token were held solely in ephemeral React component state
+     in `app/page.tsx`. Reloading the page or navigating immediately reset `user` to null.
+4. Modal Usability & Backdrop Dismissal:
+   - In `AuthModal.tsx`, `BookingModal.tsx`, `DashboardModal.tsx`, `TrustBadgeModal.tsx`,
+     and `OwnerStudioModal.tsx`, clicking outside the modal overlay did not dismiss the dialog.
+   - The close button lacked explicit `type="button"`, causing accidental form interactions.
+   - Invalid Tailwind CSS class `backdrop-blur-xs` caused rendering inconsistencies.
+   - Users lacked quick 1-click credential selector buttons for testing different roles
+     (Admin vs. Owner vs. Renter).
+
+Solutions Implemented:
+1. Next.js Reverse Proxy & Canonicalization Fix (`rentido_frontend/next.config.ts`):
+   - Added `skipTrailingSlashRedirect: true` to prevent Next.js from intercepting trailing slashes.
+   - Configured proxy rewrites with explicit trailing slash preservation:
+     * `/api/:path*/` -> `http://127.0.0.1:8000/api/:path*/`
+     * `/api/:path*`  -> `http://127.0.0.1:8000/api/:path*`
+   - Added `allowedDevOrigins: ['192.168.56.1', 'localhost', '127.0.0.1']` to support seamless local network access.
+2. Unified Browser Relative API Client (`rentido_frontend/lib/api.ts`):
+   - Changed `API_BASE_URL` to relative `'/api'` when running in the browser (`typeof window !== 'undefined'`),
+     ensuring all requests route through the Next.js reverse proxy on the same origin (eliminating all CORS & PNA issues).
+   - Upgraded `loginUser()` with safe JSON parsing and explicit error message propagation.
+3. Persistent User Session Management (`rentido_frontend/app/page.tsx`):
+   - Hydrated user session and JWT token from `localStorage` on initial component mount via `useEffect`.
+   - Persisted session upon successful login (`localStorage.setItem('rentido_token', ...)`).
+   - Added clean cleanup on logout (`localStorage.removeItem(...)`).
+4. Interactive Modal & 1-Click Role Switcher (`rentido_frontend/components/AuthModal.tsx`):
+   - Added backdrop click dismiss (`onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}`).
+   - Added 3 one-click demo role selector buttons:
+     * 🛡️ Admin: `admin@rentido.com` / `adminpassword123`
+     * 📷 Owner: `rajesh.camera@rentido.com` / `ownerpassword123`
+     * 🎒 Renter: `ananya.renter@rentido.com` / `renterpassword123`
+   - Added clear inline error banner and authenticating state indicator.
+5. Global Modal Polish:
+   - Added backdrop click dismissal and valid `backdrop-blur-sm` to all modals:
+     `AuthModal`, `BookingModal`, `DashboardModal`, `TrustBadgeModal`, and `OwnerStudioModal`.
+   - Explicit `type="button"` and `cursor-pointer` applied to all triggers.
+
+Verification:
+- Next.js Production Build: PASSED (`npm run build` completed in ~700ms with 0 errors).
+- Proxied Auth POST (/api/auth/login/): HTTP 200 OK for Admin, Owner, and Renter roles.
+- Invalid Credentials POST (/api/auth/login/): HTTP 401 with friendly error feedback.
+================================================================================
+
 
 
 

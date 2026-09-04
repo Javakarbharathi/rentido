@@ -129,8 +129,9 @@ export default function Navbar({
               </button>
 
               <button 
+                type="button"
                 onClick={onLogout}
-                className="text-xs text-gray-700 hover:text-red-700 p-2 rounded-lg"
+                className="text-xs text-gray-700 hover:text-red-700 p-2 rounded-lg cursor-pointer transition-colors"
                 title="Log Out"
               >
                 Sign Out
@@ -138,8 +139,9 @@ export default function Navbar({
             </div>
           ) : (
             <button
+              type="button"
               onClick={onOpenAuth}
-              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-full shadow-sm shadow-indigo-300 transition-all hover:shadow-md"
+              className="flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-full shadow-sm shadow-indigo-300 transition-all hover:shadow-md cursor-pointer select-none active:scale-95"
             >
               <LogIn className="w-3.5 h-3.5" />
               <span>Sign In</span>
