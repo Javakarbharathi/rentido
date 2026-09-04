@@ -82,6 +82,7 @@ export default function OwnerStudioModal({
   const [myListings, setMyListings] = useState<any[]>([]);
   const [earnings, setEarnings] = useState<any>(null);
   const [payoutMsg, setPayoutMsg] = useState<string | null>(null);
+  const [requestingPayout, setRequestingPayout] = useState(false);
 
   useEffect(() => {
     if (isOpen && token) {
@@ -196,17 +197,24 @@ export default function OwnerStudioModal({
   };
 
   const handlePayoutRequest = async () => {
-    if (!token) return;
+    if (!token) {
+      onOpenAuth();
+      return;
+    }
+    setRequestingPayout(true);
+    setPayoutMsg(null);
     try {
       const res = await requestOwnerPayout(token);
-      if (res.reference_id) {
+      if (res && res.reference_id) {
         setPayoutMsg(`Payout of ₹${res.disbursed_amount} disbursed! Ref: ${res.reference_id}`);
-        loadOwnerData();
+        await loadOwnerData();
       } else {
-        setPayoutMsg(res.detail || 'No pending balance available for payout.');
+        setPayoutMsg(res?.detail || res?.message || 'No pending balance available for payout.');
       }
     } catch (e: any) {
       setPayoutMsg(e.message || 'Payout request failed.');
+    } finally {
+      setRequestingPayout(false);
     }
   };
 
@@ -712,15 +720,42 @@ export default function OwnerStudioModal({
 
                 <button
                   onClick={handlePayoutRequest}
-                  className="px-5 py-2.5 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl transition-colors cursor-pointer shrink-0 text-xs shadow-md shadow-emerald-900/50"
+                  disabled={requestingPayout}
+                  className={`px-5 py-2.5 font-bold rounded-xl transition-all cursor-pointer shrink-0 text-xs shadow-md ${
+                    requestingPayout
+                      ? 'bg-emerald-700 text-emerald-200 cursor-not-allowed'
+                      : 'bg-emerald-500 hover:bg-emerald-600 text-white shadow-emerald-900/50'
+                  }`}
                 >
-                  ⚡ Request Instant Payout
+                  {requestingPayout ? (
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin inline-block" />
+                      Processing Payout...
+                    </span>
+                  ) : (
+                    '⚡ Request Instant Payout'
+                  )}
                 </button>
               </div>
 
               {payoutMsg && (
-                <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl text-indigo-900 font-medium">
-                  {payoutMsg}
+                <div
+                  className={`p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                    payoutMsg.includes('disbursed') || payoutMsg.includes('Successfully')
+                      ? 'bg-emerald-50 border border-emerald-200 text-emerald-900'
+                      : payoutMsg.includes('No pending')
+                      ? 'bg-amber-50 border border-amber-200 text-amber-900'
+                      : 'bg-rose-50 border border-rose-200 text-rose-900'
+                  }`}
+                >
+                  <span>
+                    {payoutMsg.includes('disbursed') || payoutMsg.includes('Successfully')
+                      ? '✅'
+                      : payoutMsg.includes('No pending')
+                      ? 'ℹ️'
+                      : '⚠️'}
+                  </span>
+                  <span>{payoutMsg}</span>
                 </div>
               )}
 

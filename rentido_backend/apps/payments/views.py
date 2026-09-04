@@ -378,8 +378,10 @@ class LedgerViewSet(viewsets.ReadOnlyModelViewSet):
             )
 
         # Create LedgerEntry for settled payout
+        latest_rental = Rental.objects.filter(owner=user).order_by('-created_at').first()
         payout_ref = f"PAYOUT-{uuid.uuid4().hex[:8].upper()}"
         LedgerEntry.objects.create(
+            rental=latest_rental,
             entry_type=LedgerEntryType.OWNER_PAYOUT_SETTLED,
             debit_account=LedgerAccount.OWNER_PAYABLE,
             credit_account=LedgerAccount.OWNER_BANK_ACCOUNT,

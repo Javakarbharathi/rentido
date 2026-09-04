@@ -255,13 +255,26 @@ export async function fetchOwnerListings(token: string) {
 }
 
 export async function fetchOwnerEarnings(token: string) {
+  let activeToken = token;
   try {
-    const res = await fetch(`${API_BASE_URL}/payments/ledger/owner-summary/`, {
-      headers: { Authorization: `Bearer ${token}` },
+    let res = await fetch(`${API_BASE_URL}/ledger/owner-summary/`, {
+      headers: { Authorization: `Bearer ${activeToken}` },
       cache: 'no-store',
     });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/ledger/owner-summary/`, {
+          headers: { Authorization: `Bearer ${activeToken}` },
+          cache: 'no-store',
+        });
+      }
+    }
+
     if (!res.ok) return null;
-    return await res.json();
+    return await res.json().catch(() => null);
   } catch (err) {
     console.warn('Could not fetch owner earnings', err);
     return null;
@@ -269,14 +282,39 @@ export async function fetchOwnerEarnings(token: string) {
 }
 
 export async function requestOwnerPayout(token: string) {
-  const res = await fetch(`${API_BASE_URL}/payments/ledger/request-payout/`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-  });
-  return await res.json();
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/ledger/request-payout/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/ledger/request-payout/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+        });
+      }
+    }
+
+    const data = await res.json().catch(() => ({
+      detail: `Server returned HTTP ${res.status}. Please ensure backend services are operational.`,
+    }));
+    return data;
+  } catch (err: any) {
+    return {
+      detail: err.message || 'Network error occurred while processing payout request.',
+    };
+  }
 }
 
 export async function addRole(token: string, role: string) {

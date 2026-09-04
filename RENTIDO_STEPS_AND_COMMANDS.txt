@@ -1061,6 +1061,57 @@ Verification:
 - Django Backend Test Suite: 52 of 52 tests PASS (100% integrity).
 ================================================================================
 
+================================================================================
+STEP 45: FIX "UNEXPECTED TOKEN '<', '<!DOCTYPE '..." IN EARNINGS & PAYOUTS
+================================================================================
+Issue:
+- When an equipment owner navigated to "Earnings & Payouts" in the Owner Studio and
+  clicked "⚡ Request Instant Payout", an error dialog appeared with:
+  `Unexpected token '<', "<!DOCTYPE "... is not valid JSON`
+
+Root Cause:
+1. Routing Mismatch:
+   - In `rentido_frontend/lib/api.ts`, `fetchOwnerEarnings` and `requestOwnerPayout`
+     targeted `${API_BASE_URL}/payments/ledger/request-payout/` and `${API_BASE_URL}/payments/ledger/owner-summary/`.
+   - In Django `rentido_backend/config/urls.py`, `apps.payments.urls` was mounted at `path('api/', ...)`,
+     and the router registered `ledger` as `r'ledger'`. This made the actual Django routes `/api/ledger/...`,
+     NOT `/api/payments/ledger/...`.
+   - As a result, calling `/api/payments/ledger/request-payout/` returned Django's HTTP 404 HTML error page (`<!DOCTYPE html>...`).
+2. Unsafe JSON Parsing:
+   - `requestOwnerPayout` in `lib/api.ts` directly invoked `res.json()` on the response without `.catch()`
+     or verifying `res.ok`, resulting in JavaScript throwing `SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON`.
+3. Payout Accounting Attribution:
+   - In `rentido_backend/apps/payments/views.py` `request_payout`, the newly created `OWNER_PAYOUT_SETTLED`
+     `LedgerEntry` was not linked to the owner's rental (`rental=None`), preventing subsequent queries
+     filtering on `rental__owner=user` from deducting settled payouts from credited earnings.
+
+Fix Implementation:
+1. Backend Route Aliasing (`rentido_backend/apps/payments/urls.py`):
+   - Added explicit direct routes for `/api/payments/ledger/`, `/api/payments/ledger/owner-summary/`,
+     and `/api/payments/ledger/request-payout/` so both `/api/ledger/` and `/api/payments/ledger/`
+     are supported seamlessly with 100% backward-compatibility.
+2. Double-Entry Accounting Attribution (`rentido_backend/apps/payments/views.py`):
+   - Attached `latest_rental = Rental.objects.filter(owner=user).order_by('-created_at').first()`
+     to the settled payout `LedgerEntry`, guaranteeing that settled payouts are deducted accurately
+     from credited earnings across both summary and payout views.
+3. Frontend API Client Hardening (`rentido_frontend/lib/api.ts`):
+   - Updated `fetchOwnerEarnings` and `requestOwnerPayout` to target `${API_BASE_URL}/ledger/...`.
+   - Added JWT auto-refresh on HTTP 401 using `refreshAccessToken()`.
+   - Added safe JSON parsing `.catch()` to prevent raw HTML syntax error exceptions from ever bubbling to the UI.
+4. Owner Studio UX Enhancement (`rentido_frontend/components/OwnerStudioModal.tsx`):
+   - Added `requestingPayout` loading state that disables the button and displays a spinner during settlement.
+   - Added user-friendly status badge styling (Emerald for disbursed, Amber/Indigo for zero-balance info, Rose for error).
+
+Verification:
+- Next.js build: PASSED (Compiled in 832ms, 0 errors, TypeScript completely clean).
+- Django test suite: 52 of 52 tests PASS (Ran 52 tests in 69.5s, OK).
+- API Tests:
+  * `/api/ledger/owner-summary/`: HTTP 200 OK (returned accurate credited, settled, and pending balances).
+  * `/api/payments/ledger/owner-summary/`: HTTP 200 OK (alias functioning identically).
+  * `/api/ledger/request-payout/` (with positive balance): HTTP 200 OK, disbursed payout, credited double-entry ledger record, reduced pending balance to ₹0.00.
+  * `/api/ledger/request-payout/` (with 0 balance): HTTP 400 Bad Request with clean JSON: `{"detail": "No pending payable balance available for payout."}`.
+================================================================================
+
 
 
 

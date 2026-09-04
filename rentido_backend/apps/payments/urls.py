@@ -10,6 +10,11 @@ router.register(r'deposits', SecurityDepositViewSet, basename='deposit')
 router.register(r'ledger', LedgerViewSet, basename='ledger')
 
 urlpatterns = [
+    # Direct alias routes for ledger to support both /api/ledger/... and /api/payments/ledger/...
+    path('payments/ledger/', LedgerViewSet.as_view({'get': 'list'}), name='payments-ledger-list'),
+    path('payments/ledger/owner-summary/', LedgerViewSet.as_view({'get': 'owner_summary'}), name='payments-ledger-owner-summary'),
+    path('payments/ledger/request-payout/', LedgerViewSet.as_view({'post': 'request_payout'}), name='payments-ledger-request-payout'),
+
     # Clean direct gateway routes
     path('razorpay/create-order/', PaymentViewSet.as_view({'post': 'razorpay_create_order'}), name='razorpay-create-order'),
     path('razorpay/verify/', PaymentViewSet.as_view({'post': 'razorpay_verify_payment'}), name='razorpay-verify'),
