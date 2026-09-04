@@ -18,13 +18,17 @@ class PaymentMethod(models.TextChoices):
     NET_BANKING = 'NET_BANKING', _('Net Banking')
     WALLET = 'WALLET', _('Wallet')
     MOCK_GATEWAY = 'MOCK_GATEWAY', _('Mock Gateway (Dev)')
+    RAZORPAY = 'RAZORPAY', _('Razorpay')
+    STRIPE = 'STRIPE', _('Stripe')
 
 
 class Payment(models.Model):
     rental = models.ForeignKey(Rental, on_delete=models.CASCADE, related_name='payments')
     payer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='payments_made')
     amount = models.DecimalField(max_digits=12, decimal_places=2)
+    currency = models.CharField(max_length=10, default='INR')
     transaction_id = models.CharField(max_length=100, unique=True)
+    gateway_order_id = models.CharField(max_length=150, blank=True, null=True, db_index=True)
     payment_method = models.CharField(max_length=30, choices=PaymentMethod.choices, default=PaymentMethod.UPI)
     status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
     gateway_response = models.JSONField(default=dict, blank=True)

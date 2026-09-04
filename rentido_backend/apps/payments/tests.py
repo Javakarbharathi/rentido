@@ -133,3 +133,153 @@ class PaymentAndLedgerTests(TestCase):
         self.assertTrue(LedgerEntry.objects.filter(
             rental=self.rental, entry_type=LedgerEntryType.DEPOSIT_RELEASED
         ).exists())
+
+    def test_razorpay_create_order(self):
+        self.client.force_authenticate(user=self.renter)
+        url = reverse('payments:razorpay-create-order')
+        res = self.client.post(url, {'rental_id': self.rental.id})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('order_id', res.data)
+        self.assertIn('amount', res.data)
+        self.assertEqual(res.data['currency'], 'INR')
+        self.assertEqual(res.data['rental_id'], self.rental.id)
+
+    def test_razorpay_verify_valid_signature_settles_booking(self):
+        import hmac
+        import hashlib
+        from apps.payments.services.gateways import RazorpayGatewayService
+
+        self.client.force_authenticate(user=self.renter)
+        order_id = "order_test_998877"
+        payment_id = "pay_test_112233"
+
+        # Generate cryptographic HMAC-SHA256 signature
+        msg = f"{order_id}|{payment_id}".encode('utf-8')
+        secret = RazorpayGatewayService.KEY_SECRET.encode('utf-8')
+        valid_signature = hmac.new(secret, msg, hashlib.sha256).hexdigest()
+
+        url = reverse('payments:razorpay-verify')
+        data = {
+            'rental_id': self.rental.id,
+            'razorpay_order_id': order_id,
+            'razorpay_payment_id': payment_id,
+            'razorpay_signature': valid_signature,
+        }
+
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], PaymentStatus.SUCCESS)
+        self.assertEqual(res.data['payment_method'], 'RAZORPAY')
+
+        self.rental.refresh_from_db()
+        self.assertEqual(self.rental.status, RentalStatus.CONFIRMED)
+
+        # Verify ledger entries were created
+        self.assertTrue(LedgerEntry.objects.filter(
+            rental=self.rental, entry_type=LedgerEntryType.PAYMENT_RECEIVED
+        ).exists())
+        self.assertTrue(LedgerEntry.objects.filter(
+            rental=self.rental, entry_type=LedgerEntryType.SECURITY_DEPOSIT_HELD
+        ).exists())
+
+    def test_razorpay_verify_tampered_signature_rejected(self):
+        self.client.force_authenticate(user=self.renter)
+        url = reverse('payments:razorpay-verify')
+        data = {
+            'rental_id': self.rental.id,
+            'razorpay_order_id': 'order_fake_123',
+            'razorpay_payment_id': 'pay_fake_456',
+            'razorpay_signature': 'tampered_invalid_signature_hex',
+        }
+
+        res = self.client.post(url, data)
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('signature verification failed', res.data['detail'])
+
+        self.rental.refresh_from_db()
+        self.assertEqual(self.rental.status, RentalStatus.PAYMENT_PENDING)
+
+    def test_razorpay_webhook_payment_captured(self):
+        import hmac
+        import hashlib
+        import json
+        from apps.payments.services.gateways import RazorpayGatewayService
+
+        webhook_data = {
+            'event': 'payment.captured',
+            'payload': {
+                'payment': {
+                    'entity': {
+                        'id': 'pay_wh_888999',
+                        'order_id': 'order_wh_111222',
+                        'amount': 405000,
+                        'currency': 'INR',
+                        'status': 'captured',
+                        'notes': {
+                            'rental_id': str(self.rental.id),
+                            'renter_id': str(self.renter.id),
+                        }
+                    }
+                }
+            }
+        }
+        body_bytes = json.dumps(webhook_data).encode('utf-8')
+        secret = RazorpayGatewayService.WEBHOOK_SECRET.encode('utf-8')
+        signature = hmac.new(secret, body_bytes, hashlib.sha256).hexdigest()
+
+        url = reverse('payments:razorpay-webhook')
+        res = self.client.post(
+            url,
+            data=body_bytes,
+            content_type='application/json',
+            HTTP_X_RAZORPAY_SIGNATURE=signature
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'handled')
+
+        self.rental.refresh_from_db()
+        self.assertEqual(self.rental.status, RentalStatus.CONFIRMED)
+
+    def test_stripe_create_intent(self):
+        self.client.force_authenticate(user=self.renter)
+        url = reverse('payments:stripe-create-intent')
+        res = self.client.post(url, {'rental_id': self.rental.id, 'currency': 'inr'})
+
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertIn('client_secret', res.data)
+        self.assertIn('payment_intent_id', res.data)
+        self.assertIn('publishable_key', res.data)
+
+    def test_stripe_webhook_succeeded(self):
+        import json
+        webhook_data = {
+            'id': 'evt_test_123',
+            'type': 'payment_intent.succeeded',
+            'data': {
+                'object': {
+                    'id': 'pi_stripe_test_456',
+                    'amount': 405000,
+                    'currency': 'inr',
+                    'metadata': {
+                        'rental_id': str(self.rental.id),
+                        'renter_id': str(self.renter.id),
+                    }
+                }
+            }
+        }
+        body_bytes = json.dumps(webhook_data).encode('utf-8')
+
+        url = reverse('payments:stripe-webhook')
+        res = self.client.post(
+            url,
+            data=body_bytes,
+            content_type='application/json',
+            HTTP_STRIPE_SIGNATURE='t=12345,v1=mock_valid_signature'
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.assertEqual(res.data['status'], 'received')
+
+        self.rental.refresh_from_db()
+        self.assertEqual(self.rental.status, RentalStatus.CONFIRMED)
+

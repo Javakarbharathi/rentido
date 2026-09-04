@@ -785,6 +785,46 @@ docker compose down
 Expected Result:
 All 7 microservices spin up healthy and connected via internal bridge network 'rentido_net'.
 Nginx serves the unified application at http://localhost/ with API at http://localhost/api/.
+================================================================================
+STEP 40: PAYMENT GATEWAYS INTEGRATION — RAZORPAY & STRIPE (OPTION 4)
+================================================================================
+Purpose: Provide production-ready, multi-gateway online payment processing
+supporting both Razorpay (for India UPI, NetBanking, Cards) and Stripe
+(for International Cards and Multi-currency), integrated with cryptographic
+HMAC-SHA256 signature verification, server-to-server webhooks, and automated
+double-entry ledger settlement.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Architecture & Gateway Capabilities:
+1. Razorpay Integration (apps.payments.services.gateways.RazorpayGatewayService):
+   - POST /api/payments/razorpay/create-order/
+     * Converts total booking amount to paise (INR * 100)
+     * Attaches rental metadata (rental_id, renter_id, listing_id)
+     * Generates official Razorpay Order ID
+   - POST /api/payments/razorpay/verify/
+     * Cryptographically validates HMAC-SHA256 signature:
+       HMAC(secret, order_id + "|" + payment_id) == razorpay_signature
+     * Transitions rental to CONFIRMED
+     * Posts double-entry financial ledger entries (Escrow hold, commission, owner payable)
+     * Dispatches rental confirmation notification
+   - POST /api/payments/razorpay/webhook/
+     * Server-to-server webhook endpoint verifying X-Razorpay-Signature header
+     * Handles payment.captured events to settle rentals asynchronously
+
+2. Stripe Integration (apps.payments.services.gateways.StripeGatewayService):
+   - POST /api/payments/stripe/create-intent/
+     * Creates Stripe PaymentIntent with client_secret for card elements
+   - POST /api/payments/stripe/webhook/
+     * Verifies Stripe-Signature header
+     * Handles payment_intent.succeeded events and executes double-entry escrow settlement
+
+3. Automated Regression Tests:
+   cd C:\Users\javak\project-nithish\rentido_backend
+   ..\.venv\Scripts\python manage.py test apps.payments
+   ..\.venv\Scripts\python manage.py test
+
+Expected Result:
+Ran 52 tests in ~70s ... OK (100% PASS across all 14 domain apps)
 --------------------------------------------------------------------------------
 
 

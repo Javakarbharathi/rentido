@@ -54,3 +54,20 @@ class InitiatePaymentSerializer(serializers.Serializer):
 class SettleDepositSerializer(serializers.Serializer):
     deduction_amount = serializers.DecimalField(max_digits=10, decimal_places=2, default=0.00)
     reason = serializers.CharField(required=False, allow_blank=True)
+
+
+class RazorpayCreateOrderSerializer(serializers.Serializer):
+    rental_id = serializers.PrimaryKeyRelatedField(queryset=Rental.objects.all(), source='rental')
+
+
+class RazorpayVerifyPaymentSerializer(serializers.Serializer):
+    rental_id = serializers.PrimaryKeyRelatedField(queryset=Rental.objects.all(), source='rental')
+    razorpay_order_id = serializers.CharField(max_length=150)
+    razorpay_payment_id = serializers.CharField(max_length=150)
+    razorpay_signature = serializers.CharField(max_length=255)
+
+
+class StripeCreateIntentSerializer(serializers.Serializer):
+    rental_id = serializers.PrimaryKeyRelatedField(queryset=Rental.objects.all(), source='rental')
+    currency = serializers.CharField(max_length=10, default='inr')
+

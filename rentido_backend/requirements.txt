@@ -21,3 +21,7 @@ redis>=5.0.8
 
 # Production WSGI Server
 gunicorn>=23.0.0
+
+# Payment Gateways (Razorpay & Stripe)
+razorpay>=2.0.1
+stripe>=15.6.1
