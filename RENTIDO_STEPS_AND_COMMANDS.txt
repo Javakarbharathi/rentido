@@ -166,50 +166,84 @@ Purpose: Build and expose REST API endpoints for user registration, JWT login,
 token refresh, user profile retrieval, and dynamic role activation.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
-Endpoints Available:
+Endpoints:
 - POST /api/auth/register/     -> Register new user (auto-provisions Renter/Owner profile)
 - POST /api/auth/login/        -> JWT Login (returns access, refresh, roles & user payload)
 - POST /api/auth/token/refresh/-> Refresh access token
 - GET  /api/auth/me/           -> Get current authenticated user profile
 - POST /api/auth/me/roles/add/ -> Add an extra role (e.g. Renter becomes Owner)
 - GET  /api/docs/              -> Interactive Swagger UI for testing endpoints
-
-Verification Command:
-..\.venv\Scripts\python manage.py test apps.users
-
-Expected Result:
-"Ran 3 tests ... OK"
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 10: RUN DEVELOPMENT SERVER & TEST APIS
+STEP 10: CATEGORIES & COMMISSION RULES ENGINE
 ================================================================================
-Purpose: Launch the Rentido local development server and access Admin and API docs.
+Purpose: Manage hierarchical product categories and admin-controlled dynamic
+commission percentages per category.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/categories/               -> Public browsing of categories and subcategories
+- POST /api/categories/               -> Create category (Admin only)
+- GET  /api/commission-rules/         -> List commission rules (Admin only)
+- POST /api/commission-rules/         -> Set commission rule per category (Admin only)
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 11: PHYSICAL ASSET MANAGEMENT & VERIFICATION LIFECYCLE
+================================================================================
+Purpose: Enable Owners to register physical inventory (brand, model, serial number,
+condition, replacement value), upload photos, and undergo Admin verification.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/assets/                   -> List physical assets owned by user (or all if admin)
+- POST /api/assets/                   -> Register physical asset (auto-activates Owner role)
+- GET  /api/assets/{id}/              -> Retrieve asset details
+- POST /api/assets/{id}/upload-media/ -> Upload photos/documents for the asset
+- POST /api/assets/{id}/verify/       -> Admin verification action (VERIFIED / REJECTED)
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 12: MARKETPLACE RENTAL LISTINGS & SEARCH DISCOVERY ENGINE
+================================================================================
+Purpose: Create commercial rental listings linked to verified assets with hourly,
+daily, weekly, monthly rates, security deposits, and discovery search filters.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/listings/                 -> Public search/filter listings (city, category, min_price, max_price, search)
+- GET  /api/listings/{id}/            -> Public detailed view of listing with asset specs
+- POST /api/listings/                 -> Create new rental listing (Owner only)
+- GET  /api/listings/my-listings/     -> Retrieve all listings owned by current user
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 13: EXECUTE AUTOMATED INTEGRATION TEST SUITE
+================================================================================
+Purpose: Run test coverage across Users, Categories, Assets, and Listings.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py runserver
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings
 
-URLs:
-- Admin Panel: http://127.0.0.1:8000/admin/
-- Swagger API Docs: http://127.0.0.1:8000/api/docs/
-- ReDoc Docs: http://127.0.0.1:8000/api/redoc/
+Expected Result:
+Ran 9 tests in ~7.8s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 11: COMMIT AND SYNC STEP 2 TO GITHUB
+STEP 14: COMMIT AND SYNC STEP 3 TO GITHUB
 ================================================================================
-Purpose: Stage updated serializers, views, test suite, and guides, commit,
-and push to the remote GitHub repository.
+Purpose: Stage and commit Category, Asset, and Listing engines to GitHub.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement JWT auth, multi-role user profile system, and test suite"
+git commit -m "feat: implement categories, physical assets, and marketplace listings engine"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Phase 1 Step 2 deliverables.
+GitHub repository synchronized with Step 3 deliverables.
 --------------------------------------------------------------------------------

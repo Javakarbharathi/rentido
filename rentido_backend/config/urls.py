@@ -17,6 +17,11 @@ urlpatterns = [
     # Auth & Identity Endpoints
     path('api/auth/', include('apps.users.urls', namespace='users')),
     
+    # Core Marketplace Endpoints
+    path('api/', include('apps.categories.urls', namespace='categories')),
+    path('api/', include('apps.assets.urls', namespace='assets')),
+    path('api/', include('apps.listings.urls', namespace='listings')),
+    
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
