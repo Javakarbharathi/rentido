@@ -1,0 +1,147 @@
+================================================================================
+                    RENTIDO — LOCAL SETUP & EXECUTION GUIDE
+================================================================================
+Project: Rentido - Trusted Local Rental Marketplace + Logistics + Asset Services
+Repository: https://github.com/Javakarbharathi/rentido.git
+Root Directory: C:\Users\javak\project-nithish
+================================================================================
+
+================================================================================
+STEP 1: REPOSITORY INITIALIZATION & GIT CONFIGURATION
+================================================================================
+Purpose: Initialize a dedicated Git repository inside project-nithish, link it
+to GitHub, and set the default branch to 'main'.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+git init
+git branch -M main
+git remote add origin https://github.com/Javakarbharathi/rentido.git
+
+Expected Result:
+Git repository initialized and connected to origin remote repository.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 2: PYTHON VIRTUAL ENVIRONMENT CREATION & ACTIVATION
+================================================================================
+Purpose: Create an isolated Python environment for Rentido dependencies.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+python -m venv .venv
+.\.venv\Scripts\activate
+
+Expected Result:
+A '.venv' directory is created with an isolated Python interpreter and pip.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 3: INSTALL PROJECT DEPENDENCIES
+================================================================================
+Purpose: Install Django, Django REST Framework, CORS headers, environment
+configuration, and documentation tools into the virtual environment.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+.\.venv\Scripts\pip install -r requirements.txt
+
+Expected Result:
+All required packages successfully installed without version conflicts.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 4: MODULAR MONOLITH PROJECT SCAFFOLDING
+================================================================================
+Purpose: Create the rentido_backend Django project structure with separated
+environments (base, development, production) and domain-driven apps directory.
+Working Directory: C:\Users\javak\project-nithish
+
+Structure:
+rentido_backend/
+├── manage.py
+├── config/
+│   ├── settings/
+│   │   ├── __init__.py
+│   │   ├── base.py
+│   │   ├── development.py
+│   │   └── production.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   └── asgi.py
+├── apps/
+│   ├── __init__.py
+│   ├── users/
+│   ├── categories/
+│   ├── assets/
+│   ├── listings/
+│   └── rentals/
+└── common/
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 5: GENERATE INITIAL DATABASE MIGRATIONS
+================================================================================
+Purpose: Create Django migration files for the core domain apps (Users with
+unified roles, Categories with commission rules, Physical Assets, Listings, and
+Rentals with immutable pricing snapshots).
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals
+
+Expected Result:
+Migration files generated under each app's migrations directory (e.g. 0001_initial.py).
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 6: APPLY MIGRATIONS TO DATABASE
+================================================================================
+Purpose: Execute all migrations against the database schema.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py migrate
+
+Expected Result:
+Database tables created for auth, users, categories, assets, listings, and rentals.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 7: SYSTEM INTEGRITY CHECK & SERVER VERIFICATION
+================================================================================
+Purpose: Ensure all Django app models, URLs, and settings pass validation.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py check
+..\.venv\Scripts\python manage.py runserver
+
+Expected Result:
+"System check identified no issues (0 silenced)."
+Development server running at http://127.0.0.1:8000/
+Interactive Swagger UI available at http://127.0.0.1:8000/api/docs/
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 8: COMMIT AND SYNC CODEBASE TO GITHUB
+================================================================================
+Purpose: Stage all project files (excluding virtual environment, database, and
+logs via .gitignore), commit the initial foundation, and push to GitHub origin.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+git add .
+git commit -m "feat: initial rentido modular monolith setup with core apps"
+git push -u origin main
+
+Expected Result:
+All project code and documentation synchronized to https://github.com/Javakarbharathi/rentido.git
+--------------------------------------------------------------------------------

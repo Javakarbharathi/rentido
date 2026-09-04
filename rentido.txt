@@ -1,0 +1,1140 @@
+RENTIDO — MASTER ARCHITECTURE
+
+Rentido = Trusted Local Rental Marketplace + Logistics + Asset Services
+
+The fundamental lifecycle:
+
+DISCOVER
+   ↓
+VERIFY
+   ↓
+BOOK
+   ↓
+PAY
+   ↓
+HANDOVER / DELIVERY
+   ↓
+USE
+   ↓
+EXTEND
+   ↓
+RETURN
+   ↓
+INSPECT
+   ↓
+REPAIR / SERVICE if required
+   ↓
+SETTLE
+   ↓
+REVIEW
+1. 🏗️ SYSTEM ARCHITECTURE
+
+For the current team, use a modular monolith.
+
+Don't start with microservices.
+
+                         ┌─────────────────────────┐
+                         │        RENTIDO          │
+                         │    Mobile / Web Apps    │
+                         └────────────┬────────────┘
+                                      │
+                 ┌────────────────────┼────────────────────┐
+                 │                    │                    │
+                 ▼                    ▼                    ▼
+             RENTER APP           OWNER APP           ADMIN PANEL
+                 │                    │                    │
+                 └────────────────────┼────────────────────┘
+                                      │
+                              ┌───────▼───────┐
+                              │   API LAYER   │
+                              │ Django + DRF  │
+                              └───────┬───────┘
+                                      │
+ ┌────────────────────────────────────┼─────────────────────────────────┐
+ │                                    │                                 │
+ ▼                                    ▼                                 ▼
+IDENTITY                          MARKETPLACE                       RENTAL
+ │                                    │                                 │
+Users                              Categories                         Booking
+Roles                              Assets                             Extension
+KYC                                Listings                           Return
+Trust                              Availability                       Inspection
+                                    Search                             Agreement
+                                                                         │
+ ┌────────────────────────────────────┼─────────────────────────────────┐
+ │                                    │                                 │
+ ▼                                    ▼                                 ▼
+PAYMENTS                          LOGISTICS                         SERVICES
+ │                                    │                                 │
+Payments                           Drivers                            Repair
+Deposits                           Vehicles                           Maintenance
+Ledger                             Delivery                           Cleaning
+Settlements                        Pickup                             Service providers
+Refunds                            Transport                           Quotes
+ │                                    │                                 │
+ └────────────────────────────────────┼─────────────────────────────────┘
+                                      │
+                         ┌────────────▼────────────┐
+                         │    MONETIZATION        │
+                         │ Commission / Fees      │
+                         │ Ads / Subscription     │
+                         │ Promotions / Rewards   │
+                         └────────────┬────────────┘
+                                      │
+                              ┌───────▼───────┐
+                              │     ADMIN     │
+                              │ Configuration │
+                              │ Operations    │
+                              │ Analytics     │
+                              └───────────────┘
+2. 📁 BACKEND STRUCTURE
+
+I'd recommend:
+
+rentido_backend/
+│
+├── manage.py
+│
+├── config/
+│   ├── settings/
+│   │   ├── base.py
+│   │   ├── development.py
+│   │   └── production.py
+│   │
+│   ├── urls.py
+│   ├── asgi.py
+│   ├── celery.py
+│   └── wsgi.py
+│
+├── apps/
+│
+│   ├── users/
+│   ├── roles/
+│   ├── kyc/
+│   ├── trust/
+│
+│   ├── categories/
+│   ├── assets/
+│   ├── listings/
+│   ├── availability/
+│
+│   ├── rentals/
+│   ├── extensions/
+│   ├── agreements/
+│   ├── inspections/
+│   ├── damages/
+│   ├── returns/
+│
+│   ├── payments/
+│   ├── deposits/
+│   ├── ledger/
+│   ├── settlements/
+│   └── refunds/
+│
+│   ├── logistics/
+│   ├── drivers/
+│   ├── vehicles/
+│   └── delivery/
+│
+│   ├── services/
+│   ├── service_providers/
+│   ├── service_requests/
+│   └── repairs/
+│
+│   ├── reviews/
+│   ├── chat/
+│   └── notifications/
+│
+│   ├── pricing/
+│   ├── commissions/
+│   ├── fees/
+│   ├── promotions/
+│   ├── advertisements/
+│   ├── subscriptions/
+│   └── rewards/
+│
+│   ├── disputes/
+│   ├── fraud/
+│   ├── analytics/
+│   └── audit/
+│
+└── common/
+    ├── permissions/
+    ├── validators/
+    ├── exceptions/
+    ├── storage/
+    └── utilities/
+
+You don't necessarily have to create every app on day one. The structure represents the domain boundaries.
+
+3. 👥 USER SYSTEM
+
+One user can have multiple roles.
+
+User
+ │
+ ├── Renter Profile
+ │
+ ├── Owner Profile
+ │
+ ├── Driver Profile
+ │
+ └── Service Provider Profile
+
+Example:
+
+A person can rent a camera from someone today and list their own projector tomorrow.
+
+Don't create separate authentication systems for each role.
+
+4. 🔐 ROLE SYSTEM
+
+Initial roles:
+
+SUPER_ADMIN
+ADMIN
+OPERATIONS_ADMIN
+FINANCE_ADMIN
+SUPPORT_ADMIN
+VERIFICATION_ADMIN
+
+RENTER
+OWNER
+DRIVER
+SERVICE_PROVIDER
+
+Use permission-based authorization.
+
+For example:
+
+commission.update
+asset.verify
+user.suspend
+refund.approve
+dispute.resolve
+settlement.view
+5. 🏪 ASSET SYSTEM
+
+Separate physical asset from rental listing.
+
+Asset
+Asset
+├── owner
+├── category
+├── brand
+├── model
+├── serial_number
+├── condition
+├── replacement_value
+├── verification_status
+└── status
+Listing
+Listing
+├── asset
+├── title
+├── description
+├── rental_price
+├── pricing_model
+├── deposit
+├── location
+├── availability
+└── status
+
+This allows the physical asset to exist independently from its current listing.
+
+6. 📸 ASSET VERIFICATION
+
+Owner submits:
+
+Asset
+ ↓
+Photos
+ ↓
+Ownership evidence
+ ↓
+Serial number
+ ↓
+Admin verification
+ ↓
+VERIFIED
+
+For expensive categories, you can later add more rigorous verification.
+
+7. 📅 AVAILABILITY ENGINE
+
+Central service:
+
+AvailabilityService
+
+It must prevent:
+
+Double booking.
+
+Support:
+
+Hourly
+Daily
+Weekly
+Monthly
+Custom duration
+
+Availability should be checked again immediately before confirming a booking.
+
+8. 🧾 RENTAL ENGINE
+
+This is the heart of Rentido.
+
+Rental
+├── renter
+├── owner
+├── listing
+├── start_datetime
+├── end_datetime
+├── pricing_snapshot
+├── deposit
+├── fulfillment
+├── agreement
+├── inspection
+└── status
+
+Statuses:
+
+PAYMENT_PENDING
+CONFIRMED
+READY_FOR_HANDOVER
+HANDOVER_IN_PROGRESS
+ACTIVE
+EXTENSION_PENDING
+RETURN_REQUESTED
+RETURN_IN_PROGRESS
+INSPECTION_PENDING
+COMPLETED
+CANCELLED
+DISPUTED
+9. 🔄 EXTENSION ENGINE
+
+Never simply overwrite the original rental period.
+
+Create:
+
+RentalExtension
+
+Flow:
+
+Renter
+ ↓
+Request extension
+ ↓
+Availability check
+ ↓
+Pricing engine
+ ↓
+Owner approval if required
+ ↓
+Payment / authorized payment
+ ↓
+Agreement addendum
+ ↓
+Extension confirmed
+
+For MVP:
+
+Prefer explicit extension confirmation/payment.
+
+Later you can support an opt-in auto-extension mechanism where payment-provider capabilities and applicable rules permit it.
+
+10. 💰 PRICING ENGINE
+
+This should be one of the most important shared services.
+
+Pricing Engine
+ │
+ ├── Rental price
+ ├── Commission
+ ├── Platform fee
+ ├── Service fee
+ ├── Delivery fee
+ ├── Extension fee
+ ├── Cancellation fee
+ ├── Discount
+ └── Taxes
+
+Every checkout uses the same pricing engine.
+
+11. 🔥 ADMIN-CONTROLLED COMMISSION
+
+Admin can configure:
+
+Camera        10%
+Projector      8%
+Furniture      7%
+Gaming        12%
+
+Don't hard-code these values.
+
+Use:
+
+CommissionRule
+
+with:
+
+category
+commission_type
+commission_value
+minimum_fee
+maximum_fee
+priority
+effective_from
+effective_until
+status
+12. 🧠 PRICING SNAPSHOT
+
+At confirmation:
+
+Pricing Engine
+      ↓
+Pricing Snapshot
+      ↓
+Rental
+
+Example:
+
+Rental:
+₹2,000
+
+Commission:
+₹200
+
+Platform fee:
+₹100
+
+Delivery:
+₹150
+
+Deposit:
+₹5,000
+
+If admin changes commission tomorrow:
+
+Existing confirmed rental remains unchanged.
+
+New rental uses the new rule.
+
+This is mandatory for your architecture.
+
+13. 💳 PAYMENT SYSTEM
+
+Separate:
+
+Payment
+Deposit
+Ledger
+Settlement
+Refund
+
+Flow:
+
+Renter
+ ↓
+Payment provider
+ ↓
+Webhook verification
+ ↓
+Payment confirmed
+ ↓
+Ledger
+ ↓
+Rental confirmed
+
+Never trust only:
+
+"Payment successful" from the frontend.
+
+14. 🏦 LEDGER
+
+Track platform and owner money separately.
+
+Example:
+
+Customer payment       ₹7,000
+
+Rental                 ₹5,000
+Delivery               ₹500
+Platform commission    ₹500
+Security deposit       ₹1,000
+
+Deposit should not be treated as platform revenue.
+
+Use immutable transaction records.
+
+15. 🔐 SECURITY DEPOSIT
+
+Lifecycle:
+
+Deposit collected/authorized
+          ↓
+       Rental
+          ↓
+        Return
+          ↓
+      Inspection
+          ↓
+     ┌────┴────┐
+     ↓         ↓
+ No issue    Damage
+     ↓         ↓
+ Release   Assessment
+               ↓
+         Repair / dispute
+16. 🤝 HANDOVER SYSTEM
+
+Support:
+
+OWNER_HANDOVER
+DRIVER_DELIVERY
+HUB_PICKUP
+
+At handover:
+
+OTP
+Photos
+Condition checklist
+Timestamp
+Location where appropriate
+Signature/acknowledgement
+17. 🚚 RENTIDO LOGISTICS
+
+This is your new major module.
+
+Logistics
+│
+├── Delivery
+├── Pickup
+├── Transport
+├── Drivers
+└── Vehicles
+
+A large rental can automatically suggest transport.
+
+Example:
+
+Furniture
+ ↓
+Dimensions + weight
+ ↓
+Vehicle matching
+ ↓
+Mini truck recommended
+ ↓
+Driver matching
+ ↓
+Booking
+18. 🚛 VEHICLE SYSTEM
+
+Driver registers:
+
+Vehicle
+├── type
+├── capacity
+├── dimensions
+├── registration
+├── verification
+└── availability
+
+Possible vehicle types:
+
+BIKE
+CAR
+AUTO
+MINI_TRUCK
+TRUCK
+SPECIAL_TRANSPORT
+19. 🛵 DRIVER SYSTEM
+
+Driver flow:
+
+Available
+ ↓
+Delivery request
+ ↓
+Accept
+ ↓
+Navigate
+ ↓
+Pickup OTP
+ ↓
+Load asset
+ ↓
+Pickup proof
+ ↓
+Delivery
+ ↓
+Customer OTP
+ ↓
+Delivery proof
+ ↓
+Completed
+ ↓
+Settlement
+20. 📸 TRANSPORT CONDITION TRACKING
+
+For valuable assets:
+
+Before loading
+       ↓
+Pickup
+       ↓
+Transport
+       ↓
+Delivery
+       ↓
+After unloading
+
+Capture photos at appropriate stages.
+
+This becomes important for:
+
+Transport damage disputes.
+
+21. 💰 LOGISTICS REVENUE
+
+Example:
+
+Customer pays transport: ₹600
+
+Driver payout:          ₹540
+Rentido fee:             ₹60
+
+But again:
+
+Don't hard-code 10%.
+
+Use:
+
+LogisticsCommissionRule
+
+Admin can modify it.
+
+22. 🔧 RENTIDO SERVICES
+
+This is the feature you suggested earlier.
+
+When an asset is damaged:
+
+Return
+ ↓
+Any issue?
+ ↓
+YES
+ ↓
+Damage report
+ ↓
+Service provider suggestions
+ ↓
+Quote
+ ↓
+Approval
+ ↓
+Repair
+ ↓
+Inspection
+ ↓
+Asset available again
+23. 🧑‍🔧 SERVICE PROVIDER MARKETPLACE
+
+Provider profile:
+
+Service Provider
+├── category
+├── location
+├── verification
+├── experience
+├── rating
+├── services
+└── pricing
+
+Possible categories:
+
+Camera Repair
+Laptop Repair
+Bike Service
+Furniture Repair
+Gaming Repair
+Cleaning
+Maintenance
+Electronics
+
+Rentido can earn a configurable commission from completed service transactions.
+
+24. ⚖️ DAMAGE SYSTEM
+
+Create:
+
+DamageReport
+
+with:
+
+rental
+asset
+reported_by
+description
+photos
+severity
+estimated_cost
+status
+
+Don't automatically blame the renter.
+
+Possible outcomes:
+
+NORMAL_WEAR
+OWNER_RESPONSIBILITY
+RENTER_RESPONSIBILITY
+TRANSPORT_DAMAGE
+DISPUTED
+INSURANCE_CASE
+
+Final responsibility can be determined through your agreement/policy and applicable protection/insurance process.
+
+25. 📜 AGREEMENT SYSTEM
+
+Every confirmed rental gets an agreement.
+
+RentalAgreement
+
+Include:
+
+Rental period
+Price
+Deposit
+Responsibilities
+Return conditions
+Cancellation
+Extension rules
+Damage rules
+Delivery terms
+
+Extensions create:
+
+AgreementAddendum
+26. 📸 INSPECTION SYSTEM
+
+Types:
+
+PRE_RENTAL
+HANDOVER
+RETURN
+POST_REPAIR
+
+Store:
+
+Photos
+Videos
+Checklist
+Condition
+Timestamp
+Actor
+27. ⭐ REVIEW SYSTEM
+
+After completed rental:
+
+Renter → Owner
+Owner → Renter
+Renter → Asset
+Renter → Driver
+
+Reviews should only become available after the appropriate transaction event.
+
+28. 🛡️ TRUST SYSTEM
+
+Build:
+
+TrustProfile
+TrustEvent
+
+Events:
+
+KYC verified
+Rental completed
+On-time return
+Late return
+Cancellation
+Dispute
+Review
+
+This eventually becomes your:
+
+Rentido Trust Score
+
+29. 💬 CHAT
+
+Chat between:
+
+Renter ↔ Owner
+Renter ↔ Driver
+Owner ↔ Service Provider
+
+But ideally:
+
+Keep important transactions inside the platform.
+
+You don't want the platform to become just a phone-number exchange.
+
+For example, mask direct contact details until appropriate lifecycle stages if your business/legal policy supports it.
+
+30. 🛡️ DISPUTE SYSTEM
+Dispute
+├── rental
+├── raised_by
+├── category
+├── evidence
+├── status
+├── assigned_admin
+└── resolution
+
+Examples:
+
+Asset damage
+Missing accessory
+Late return
+Transport damage
+Deposit disagreement
+Service issue
+31. 📢 ADVERTISEMENT SYSTEM
+
+Owners can promote listings.
+
+AdCampaign
+AdPlacement
+AdPricingRule
+AdImpression
+AdClick
+
+Example:
+
+"Featured Camera"
+
+Admin controls:
+
+₹100/day
+
+Don't hard-code ad pricing.
+
+32. 💎 SUBSCRIPTIONS
+
+Later:
+
+Renter Plus
+
+Possible benefits:
+
+Lower fees
+Priority support
+Discounts
+Delivery benefits
+Owner Pro
+
+Possible benefits:
+
+Analytics
+Better exposure
+Bulk inventory
+Advanced tools
+33. 🎁 REWARDS
+RewardRule
+RewardWallet
+RewardTransaction
+
+Examples:
+
+First rental
+Referral
+Successful return
+Review
+Campaign
+
+This also allows your:
+
+First rental platform fee = ₹0
+
+campaign to be implemented as a configurable promotion rather than hard-coded logic.
+
+34. 📊 ADMIN PANEL
+
+Your admin panel is extremely important.
+
+ADMIN
+│
+├── Dashboard
+├── Users
+├── Owners
+├── Renters
+├── Drivers
+├── Service Providers
+│
+├── KYC
+├── Assets
+├── Listings
+├── Rentals
+├── Extensions
+├── Inspections
+├── Damages
+├── Disputes
+│
+├── Payments
+├── Deposits
+├── Ledger
+├── Settlements
+│
+├── Logistics
+├── Services
+│
+├── Revenue
+│   ├── Commission
+│   ├── Platform Fees
+│   ├── Service Fees
+│   └── Delivery Fees
+│
+├── Promotions
+├── Ads
+├── Subscriptions
+├── Rewards
+│
+├── Analytics
+├── Notifications
+├── Audit Logs
+└── Platform Settings
+35. ⚙️ ADMIN CONFIGURATION ENGINE
+
+This is one of the most important pieces.
+
+Admin should be able to change:
+
+Rental commission
+Logistics commission
+Service commission
+
+Platform fee
+Delivery fee
+Extension fee
+Cancellation fee
+Late fee
+
+Deposit rules
+
+Advertisement pricing
+
+Subscription pricing
+
+Promotions
+
+Rewards
+
+without changing backend source code.
+
+36. 🧾 AUDIT SYSTEM
+
+Every financial/configuration change:
+
+Admin
+ ↓
+Old value
+ ↓
+New value
+ ↓
+Effective date
+ ↓
+Reason
+ ↓
+Timestamp
+
+Example:
+
+Camera commission
+
+Old: 10%
+New: 8%
+
+Effective:
+01 Sep 2026
+
+Changed by:
+Finance Admin
+37. 🔔 NOTIFICATION SYSTEM
+
+Support:
+
+Push
+Email
+SMS
+In-app
+
+Events:
+
+Booking confirmed
+Payment successful
+Pickup scheduled
+Delivery arriving
+Rental ending
+Extension requested
+Return requested
+Damage reported
+Refund completed
+Settlement completed
+
+Use Celery/background workers for asynchronous notifications.
+
+38. 📊 ANALYTICS
+
+Admin should eventually see:
+
+Marketplace
+Users
+Owners
+Assets
+Listings
+Bookings
+Financial
+GMV
+Platform revenue
+Commission
+Delivery revenue
+Service revenue
+Advertising
+Subscriptions
+Refunds
+Operational
+Cancellation
+Late returns
+Damage
+Disputes
+Delivery success
+Asset utilization
+39. 🔒 SECURITY ARCHITECTURE
+
+Implement from day one:
+
+JWT/session security
+RBAC
+Object-level authorization
+Rate limiting
+Input validation
+Webhook signature verification
+Idempotency
+Audit logs
+Secure file uploads
+Encrypted sensitive data where appropriate
+
+And particularly:
+
+A renter must never be able to access another renter's rental/payment documents by changing an ID in an API request.
+
+40. ⚡ ASYNCHRONOUS PROCESSING
+
+Use Celery/Redis or your equivalent background infrastructure for:
+
+Notifications
+Payment reconciliation
+Settlement processing
+Expiration jobs
+Rental reminders
+Auto cancellation
+Analytics aggregation
+Image processing
+Document processing
+
+Don't make the user wait for everything synchronously.
+
+41. 🔄 INTERNAL EVENT MODEL
+
+Use application events such as:
+
+UserVerified
+AssetVerified
+
+RentalCreated
+RentalConfirmed
+PaymentCompleted
+
+HandoverCompleted
+RentalStarted
+
+ExtensionRequested
+ExtensionApproved
+
+ReturnRequested
+ReturnCompleted
+
+InspectionCompleted
+
+DamageReported
+ServiceCompleted
+
+RentalCompleted
+
+DisputeCreated
+SettlementCompleted
+
+These make future integrations much easier.
+
+42. 🧠 THE CORE RENTAL LIFECYCLE
+
+Your developers should understand this flow better than anything else:
+
+                     LISTING
+                        │
+                        ▼
+                    DISCOVERY
+                        │
+                        ▼
+                    BOOKING
+                        │
+                        ▼
+                   AVAILABILITY
+                        │
+                        ▼
+                    PRICING
+                        │
+                        ▼
+                    PAYMENT
+                        │
+                        ▼
+                  CONFIRMATION
+                        │
+              ┌─────────┴─────────┐
+              │                   │
+          SELF PICKUP           DELIVERY
+              │                   │
+              └─────────┬─────────┘
+                        ▼
+                    HANDOVER
+                        │
+                        ▼
+                       USE
+                        │
+                  ┌─────┴─────┐
+                  │           │
+              EXTENSION      RETURN
+                  │           │
+                  └─────┬─────┘
+                        ▼
+                    INSPECTION
+                        │
+               ┌────────┴────────┐
+               │                 │
+            NO ISSUE           DAMAGE
+               │                 │
+               │             ASSESSMENT
+               │                 │
+               │             SERVICE/
+               │             DISPUTE
+               │                 │
+               └────────┬────────┘
+                        ▼
+                    COMPLETION
+                        │
+                        ▼
+                    SETTLEMENT
+                        │
+                        ▼
+                     REVIEW
