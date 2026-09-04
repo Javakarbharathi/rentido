@@ -651,6 +651,39 @@ Complete Domain Endpoints Overview:
 14. /api/admin-ops/, /api/audit/   -> Financial overview, dispute arbitration & audit
 --------------------------------------------------------------------------------
 
+================================================================================
+STEP 37: MODERN NEXT.JS FRONTEND CLIENT APPLICATION (PHASE 10 / OPTION 2)
+================================================================================
+Purpose: Provide a responsive, high-converting marketplace web application
+(Next.js 16 + TypeScript + Tailwind CSS 4 + Lucide Icons) connected live to the
+Rentido API backend.
+Working Directory: C:\Users\javak\project-nithish\rentido_frontend
+
+Features Implemented:
+- Responsive Navbar with city picker, search bar, and JWT authentication widget
+- Hero Section with value proposition and interactive search filters
+- Category Explorer Grid with equipment filtering
+- Verified Listing Cards with daily pricing, refundable escrow deposit pills, and owner trust badges
+- Interactive Booking & Escrow Dialog:
+  * Dynamic rental duration selector (1, 2, 3, 7 days)
+  * Fulfillment toggle (Doorstep Delivery vs. Free Self-Pickup)
+  * Real-time coupon code validation (e.g. WELCOME20) with instant savings
+  * Live price breakdown (Base rent, discount, platform fee, delivery, escrow deposit)
+  * 1-Click simulated booking with Mutual Handover OTP generation
+- Dynamic Trust Score Modal (0-1000 reputation gauge, 4-tier matrix: Bronze to Platinum)
+- Participant Dashboard (Active bookings with OTPs, referral share link)
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_frontend
+npm install
+npm run build
+npm run dev -- -p 3000
+
+Access URL:
+- Rentido Web Application: http://localhost:3000/
+--------------------------------------------------------------------------------
+
+
 
 
 
