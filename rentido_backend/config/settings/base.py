@@ -54,6 +54,7 @@ LOCAL_APPS = [
     'apps.services',
     'apps.reviews',
     'apps.trust',
+    'apps.notifications',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -133,3 +134,33 @@ SPECTACULAR_SETTINGS = {
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
+
+# Celery Configuration
+CELERY_BROKER_URL = os.getenv('CELERY_BROKER_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.getenv('CELERY_RESULT_BACKEND', 'redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_ALWAYS_EAGER = os.getenv('CELERY_ALWAYS_EAGER', 'True') == 'True'
+CELERY_TASK_EAGER_PROPAGATES = True
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+# Celery Beat Periodic Tasks
+CELERY_BEAT_SCHEDULE = {
+    'check-upcoming-returns-hourly': {
+        'task': 'apps.notifications.tasks.task_check_upcoming_returns',
+        'schedule': 3600.0,
+    },
+    'check-overdue-rentals-hourly': {
+        'task': 'apps.notifications.tasks.task_check_overdue_rentals',
+        'schedule': 3600.0,
+    },
+    'expire-unpaid-reservations-every-15m': {
+        'task': 'apps.notifications.tasks.task_expire_unpaid_rentals',
+        'schedule': 900.0,
+    },
+}
+

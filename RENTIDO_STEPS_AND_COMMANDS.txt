@@ -421,3 +421,82 @@ Expected Result:
 GitHub repository synchronized with Phase 6 deliverables.
 --------------------------------------------------------------------------------
 
+================================================================================
+STEP 25: CELERY & REDIS BACKGROUND TASK SCHEDULER SETUP (PHASE 7)
+================================================================================
+Purpose: Configure asynchronous task worker and Celery Beat scheduler for automated
+marketplace health checks (return reminders, overdue enforcement, booking expiry).
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Configuration & Files:
+- config/celery.py                                 -> Celery app initialization with Django auto-discovery
+- config/__init__.py                              -> Exposes celery_app
+- config/settings/base.py                         -> CELERY_BROKER_URL, CELERY_BEAT_SCHEDULE, CELERY_TASK_ALWAYS_EAGER
+- .env.example                                    -> CELERY_BROKER_URL, CELERY_RESULT_BACKEND
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python -m pip install celery redis
+
+To run Celery worker locally (with Redis running):
+..\.venv\Scripts\celery -A config worker -l info
+
+To run Celery Beat periodic scheduler:
+..\.venv\Scripts\celery -A config beat -l info
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 26: NOTIFICATIONS ENGINE & PREFERENCES (PHASE 7)
+================================================================================
+Purpose: Provide centralized notification dispatching (IN_APP, EMAIL, SMS, PUSH)
+and user-configurable notification delivery preferences.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET   /api/notifications/                       -> Browse authenticated user's notifications (?is_read=false, ?channel=)
+- GET   /api/notifications/{id}/                  -> Retrieve notification details
+- POST  /api/notifications/{id}/mark-read/        -> Mark a single notification as read
+- POST  /api/notifications/mark-all-read/         -> Mark all notifications as read
+- GET   /api/notifications/unread-count/          -> Count unread notifications
+- GET   /api/notifications/preferences/           -> Retrieve user notification preferences
+- PUT   /api/notifications/preferences/           -> Update email/sms/push/marketing preferences
+
+Periodic Celery Tasks:
+1. task_check_upcoming_returns(): Scans rentals ending in <= 24h and alerts renters.
+2. task_check_overdue_rentals(): Detects overdue rentals, triggers trust penalties (-15 pts), and alerts owner & renter.
+3. task_expire_unpaid_rentals(): Cancels pending bookings older than 1 hour.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 27: EXECUTE COMPREHENSIVE REGRESSION TEST SUITE (36/36 PASS)
+================================================================================
+Purpose: Run automated test suite across all 12 domain applications on MySQL 8.0.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics apps.services apps.reviews apps.trust apps.notifications
+
+Expected Result:
+Ran 36 tests in ~44s ... OK
+All 12 apps passing with 100% integrity.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 28: COMMIT AND SYNC PHASE 7 TO GITHUB
+================================================================================
+Purpose: Stage and commit Celery, background workers, periodic schedulers, and
+notification engine to the remote repository.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+git add .
+git commit -m "feat: implement Celery background task scheduler and notifications engine"
+git push origin main
+
+Expected Result:
+GitHub repository synchronized with Phase 7 deliverables.
+--------------------------------------------------------------------------------
+
+
