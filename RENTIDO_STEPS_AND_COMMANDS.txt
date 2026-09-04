@@ -616,6 +616,42 @@ Expected Result:
 GitHub repository synchronized with Phase 9 deliverables.
 --------------------------------------------------------------------------------
 
+================================================================================
+STEP 36: START DEVELOPMENT SERVER & ACCESS INTERACTIVE API DOCUMENTATION
+================================================================================
+Purpose: Launch the Django ASGI/WSGI development server and explore the complete
+interactive OpenAPI Swagger & ReDoc suite with all 14 domain apps.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py runserver 127.0.0.1:8000
+
+Access URLs:
+- Interactive Swagger UI:   http://127.0.0.1:8000/api/docs/
+- Redoc API Explorer:       http://127.0.0.1:8000/api/redoc/
+- OpenAPI Raw JSON/YAML:    http://127.0.0.1:8000/api/schema/
+- Django Admin Portal:      http://127.0.0.1:8000/admin/
+  (Superuser: admin@rentido.com / adminpassword123)
+
+Complete Domain Endpoints Overview:
+1.  /api/auth/                     -> Multi-role authentication & JWT tokens
+2.  /api/categories/               -> Hierarchical categories & dynamic commissions
+3.  /api/assets/                   -> Physical assets & verification workflows
+4.  /api/listings/                 -> Rental listings & search filters
+5.  /api/rentals/                  -> Rental reservations, pricing & OTP handovers
+6.  /api/payments/                 -> Payments, double-entry ledger & escrow deposits
+7.  /api/inspections/              -> Condition inspections & damage reports
+8.  /api/vehicles/, /api/delivery/ -> Driver fleet & logistics dispatch
+9.  /api/providers/, /api/repairs/ -> Maintenance & service provider marketplace
+10. /api/reviews/                  -> Multi-party reviews & ratings
+11. /api/trust/                    -> Dynamic trust scores (0-1000) & tier badges
+12. /api/notifications/            -> Central dispatcher & user preferences
+13. /api/coupons/, /api/referrals/ -> Promotions, surge pricing & referral program
+14. /api/admin-ops/, /api/audit/   -> Financial overview, dispute arbitration & audit
+--------------------------------------------------------------------------------
+
+
 
 
 
