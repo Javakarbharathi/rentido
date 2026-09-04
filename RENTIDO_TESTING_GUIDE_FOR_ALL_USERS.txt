@@ -1,0 +1,567 @@
+================================================================================
+RENTIDO PLATFORM — END-TO-END USER TESTING MANUAL & SCENARIO GUIDE
+================================================================================
+Platform:    Rentido (Trusted Local Rental Marketplace + Logistics + Asset Services)
+Web Client:  http://localhost:3000/
+Swagger UI:  http://127.0.0.1:8000/api/docs/
+Admin Panel: http://127.0.0.1:8000/admin/
+Database:    MySQL 8.0 on Port 3307 (Database: rentido)
+Status:      All 14 Backend Domain Apps Operational (52/52 Tests PASS)
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+PART 1: PRE-CONFIGURED TEST USER ACCOUNTS & CREDENTIALS
+PART 2: ROLE 1 — ADMIN & PLATFORM OPERATOR TEST SCENARIOS
+PART 3: ROLE 2 — ASSET OWNER TEST SCENARIOS (HOW TO CREATE & MANAGE GEAR)
+PART 4: ROLE 3 — RENTER TEST SCENARIOS (DISCOVERY, BOOKING, ESCROW & OTP)
+PART 5: ROLE 4 — LOGISTICS DRIVER TEST SCENARIOS (2-STAGE OTP DELIVERY)
+PART 6: ROLE 5 — SERVICE PROVIDER / REPAIR TEST SCENARIOS
+PART 7: ADVANCED API TESTING (CURL / POSTMAN / SWAGGER EXAMPLES)
+PART 8: AUTOMATED REGRESSION SUITE VERIFICATION COMMANDS
+================================================================================
+
+
+================================================================================
+PART 1: PRE-CONFIGURED TEST USER ACCOUNTS & CREDENTIALS
+================================================================================
+
+All test accounts are pre-seeded into MySQL with verified email/phone statuses:
+
+1. SUPER ADMIN / PLATFORM OPERATOR:
+   - Email:    admin@rentido.com
+   - Password: adminpassword123
+   - Role:     SUPER_ADMIN / ADMIN
+   - Permissions: Full platform authority, escrow arbitration, commission configuration.
+
+2. VERIFIED ASSET OWNER 1 (Bangalore):
+   - Email:    rajesh.camera@rentido.com
+   - Password: ownerpassword123
+   - Business: Apex Cinema Rentals
+   - City:     Bangalore (Indiranagar / Koramangala)
+   - Trust:    Gold Tier (Score: 620, 38 completed rentals)
+
+3. VERIFIED ASSET OWNER 2 (Mumbai):
+   - Email:    priya.tech@rentido.com
+   - Password: ownerpassword123
+   - Business: TechVault Solutions
+   - City:     Mumbai (Bandra West)
+   - Trust:    Platinum Tier (Score: 740, 85 completed rentals)
+
+4. VERIFIED RENTER (Bangalore):
+   - Email:    ananya.renter@rentido.com
+   - Password: renterpassword123
+   - City:     Bangalore (Indiranagar)
+   - Trust:    Silver Tier (Score: 240, KYC Verified)
+
+5. LOGISTICS FLEET DRIVER (Bangalore):
+   - Email:    arun.driver@rentido.com
+   - Password: driverpassword123
+   - Role:     DRIVER
+   - Vehicle:  Mini-Truck / All-Weather Cargo Van
+
+6. REPAIR / SERVICE PROVIDER:
+   - Email:    ramesh.service@rentido.com
+   - Password: servicepassword123
+   - Role:     SERVICE_PROVIDER
+   - Specialty: Cinema Optical & Electronics Repair
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 2: ROLE 1 — ADMIN & PLATFORM OPERATOR TEST SCENARIOS
+================================================================================
+
+--------------------------------------------------------------------------------
+Q 1.1: How does an Admin log into the Django Admin Operations Portal?
+--------------------------------------------------------------------------------
+STEPS:
+1. Open your browser and navigate to: http://127.0.0.1:8000/admin/
+2. Enter the Admin Credentials:
+   - Username / Email: admin@rentido.com
+   - Password:         adminpassword123
+3. Click "Log in".
+EXPECTED RESULT:
+- You are greeted with the Django Administration dashboard displaying all 14 domain
+  sections: Users, Assets, Listings, Categories, Rentals, Payments, Inspections,
+  Logistics, Services, Reviews, Trust, Notifications, Promotions, and Audit.
+
+--------------------------------------------------------------------------------
+Q 1.2: How does an Admin inspect and verify newly submitted physical equipment?
+--------------------------------------------------------------------------------
+STEPS VIA WEB UI / API:
+1. In the Admin Portal, click on "Assets" -> "Assets" (or open Swagger: http://127.0.0.1:8000/api/docs/).
+2. Select any Asset with verification_status = "PENDING" or "UNDER_REVIEW".
+3. Check the physical serial number (e.g. SN-SONY-FX3-7712) and replacement value.
+4. Set "Verification status" to "VERIFIED" and set "Status" to "AVAILABLE".
+5. Or via REST API:
+   POST /api/admin-ops/verify-asset/{asset_id}/
+   Headers: Authorization: Bearer <ADMIN_JWT_TOKEN>
+   Body:
+   {
+     "status": "VERIFIED",
+     "admin_notes": "Serial number cross-referenced with manufacturer invoice. Verified."
+   }
+EXPECTED RESULT:
+- Asset verification status updates to VERIFIED.
+- An immutable entry is written to AuditLogEntry with old/new values and timestamp.
+- Owner receives an instant notification that their equipment is verified and live.
+
+--------------------------------------------------------------------------------
+Q 1.3: How does an Admin change dynamic category commission rules without code changes?
+--------------------------------------------------------------------------------
+STEPS:
+1. In Admin Portal, navigate to "Categories" -> "Commission rules".
+2. Click on the rule for "Cameras & Optics".
+3. Change "Commission value" from 10.00% to 8.50%.
+4. Set Minimum Fee: 50.00, Maximum Fee: 2500.00.
+5. Click "Save".
+EXPECTED RESULT:
+- All future checkouts for Cameras will automatically apply the new 8.50% rate.
+- Historical confirmed rentals remain protected with their immutable PricingSnapshot.
+
+--------------------------------------------------------------------------------
+Q 1.4: How does an Admin create promotional discount coupons and surge pricing rules?
+--------------------------------------------------------------------------------
+STEPS:
+1. In Admin Portal, navigate to "Promotions" -> "Coupons".
+2. Click "Add Coupon":
+   - Code:                   DIWALI30
+   - Title:                  Diwali 30% Festival Discount
+   - Discount Type:          PERCENTAGE
+   - Discount Value:         30.00
+   - Max Discount Amount:    1500.00
+   - Minimum Rental Amount:  1000.00
+   - Is Active:              Checked
+3. Click "Save".
+4. To add a surge multiplier: Navigate to "Surge pricing rules" -> "Add Surge Rule":
+   - Name:       Peak Studio Weekend Surge
+   - Multiplier: 1.20 (representing +20% surge)
+   - City:       Bangalore
+   - Is Active:  Checked
+EXPECTED RESULT:
+- Coupon DIWALI30 immediately becomes redeemable at checkout.
+- Renter gets up to ₹1,500 off while base owner payout is preserved.
+
+--------------------------------------------------------------------------------
+Q 1.5: How does an Admin arbitrate a damage dispute and split the escrow deposit?
+--------------------------------------------------------------------------------
+STEPS:
+1. Send a POST request to /api/admin-ops/arbitrate-dispute/ via Swagger:
+   POST http://127.0.0.1:8000/api/admin-ops/arbitrate-dispute/
+   Headers:
+     Authorization: Bearer <ADMIN_TOKEN>
+     Content-Type:  application/json
+   Body:
+   {
+     "damage_report_id": 1,
+     "owner_deduction_amount": 3500.00,
+     "arbitration_notes": "Fair assessment: small ding on tripod mount. ₹3,500 allocated to Owner for repair, remaining deposit refunded to Renter."
+   }
+EXPECTED RESULT:
+- SecurityDeposit transitions to PARTIALLY_DEDUCTED.
+- LedgerService records 2 double-entry entries:
+  1. DEPOSIT_DEDUCTED: ₹3,500 from SECURITY_DEPOSIT_ESCROW -> OWNER_PAYABLE
+  2. DEPOSIT_RELEASED: Un-deducted balance from ESCROW -> RENTER_BANK_ACCOUNT
+- Both Owner and Renter receive arbitration resolution notifications.
+
+--------------------------------------------------------------------------------
+Q 1.6: How does an Admin inspect the platform financial overview and ledger?
+--------------------------------------------------------------------------------
+STEPS:
+1. Open GET http://127.0.0.1:8000/api/admin-ops/financial-overview/
+EXPECTED RESULT:
+- JSON response displaying:
+  * total_gross_merchandise_volume: Aggregate value of all bookings
+  * total_platform_commission: Total commission revenue earned
+  * total_delivery_fees: Total logistics revenue earned
+  * active_escrow_security_deposits_held: Funds safeguarded in escrow
+  * total_rentals_completed: Completed rental count
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 3: ROLE 2 — ASSET OWNER TEST SCENARIOS (HOW TO CREATE & MANAGE GEAR)
+================================================================================
+
+--------------------------------------------------------------------------------
+Q 2.1: How does an Owner log into the Rentido Web Application?
+--------------------------------------------------------------------------------
+STEPS:
+1. Open http://localhost:3000/ in Google Chrome / Edge.
+2. In the top navigation bar, click the purple "Sign In" button.
+3. In the sign-in modal, click the demo quick-fill button:
+   "Auto-fill Demo Credentials (Admin / Owner)"
+   OR manually type: rajesh.camera@rentido.com / ownerpassword123
+4. Click "Sign In as Admin / Owner".
+EXPECTED RESULT:
+- The top-right navbar changes to show your active user pill (e.g. "rajesh.camera")
+  with an emerald pulsing active status and trust score star.
+
+--------------------------------------------------------------------------------
+Q 2.2: How does an Owner list brand-new gear/equipment in the Owner Studio?
+--------------------------------------------------------------------------------
+STEPS IN WEB BROWSER:
+1. In the top navigation bar, click the vibrant "+ List Gear" button.
+   (The "Owner Studio & Portfolio" modal opens).
+2. Option A (1-Click Instant Demo):
+   - Click the button "⚡ Autofill Cinema Gear".
+   - Notice the entire physical asset and rental listing form autofills:
+     * Equipment Name:       RED Komodo 6K Cinema Camera Kit
+     * Category:             Cameras & Optics
+     * Brand & Model:        RED Digital Cinema / Komodo 6K
+     * Unique Serial:        SN-RED-XXXX (Auto-generated unique serial)
+     * Replacement Value:    ₹450,000
+     * Condition:            LIKE_NEW
+     * Commercial Title:     RED Komodo 6K Global Shutter Cinema Camera Kit
+     * Daily Rental Rate:    ₹3,500 / day
+     * Escrow Deposit:       ₹20,000
+     * City:                 Bangalore
+     * Area / Pincode:       Koramangala / 560034
+     * Delivery / Pickup:    Both checked
+3. Option B (Custom Gear):
+   - Enter your own gear details (e.g. "Sony A7S III", "DJI RS3 Pro Gimbal").
+4. Click the purple button: "Publish Equipment to Live Marketplace".
+EXPECTED RESULT:
+- Green success confirmation appears: '"RED Komodo 6K..." successfully published to the live marketplace!'
+- The homepage marketplace feed behind the modal instantly refreshes and includes your new listing!
+- The physical Asset is stored in MySQL with status DRAFT/AVAILABLE, and the Listing is PUBLISHED.
+
+--------------------------------------------------------------------------------
+Q 2.3: How does an Owner view and manage their active equipment portfolio?
+--------------------------------------------------------------------------------
+STEPS:
+1. Inside the Owner Studio modal, click on the second tab: "My Equipment".
+EXPECTED RESULT:
+- Displays all equipment registered to your account.
+- Shows daily rental rate, refundable deposit held, serial number, and status badge ("PUBLISHED").
+
+--------------------------------------------------------------------------------
+Q 2.4: How does an Owner check earnings and request an instant bank payout?
+--------------------------------------------------------------------------------
+STEPS:
+1. Inside the Owner Studio modal, click on the third tab: "Earnings & Payouts".
+2. Review the 4 real-time KPI cards:
+   * Total Credited:         Total earnings from completed rentals
+   * Disbursed:              Payouts already transferred
+   * Available Balance:      Pending balance available for instant withdrawal
+   * Escrow Deposits Held:   Active security deposits safeguarded
+3. Click "⚡ Request Instant Payout".
+EXPECTED RESULT:
+- Green notice appears: "Payout of ₹X,XXX disbursed! Ref: PAYOUT-XXXXXXXX".
+- A new immutable double-entry ledger record (OWNER_PAYOUT_SETTLED) is created.
+- Available balance updates to ₹0.00.
+
+--------------------------------------------------------------------------------
+Q 2.5: How does an Owner complete physical equipment handover with the Renter?
+--------------------------------------------------------------------------------
+STEPS:
+1. When the renter arrives for pickup or driver arrives, ask the renter for their Handover OTP.
+2. Call POST /api/rentals/{rental_id}/verify-handover-otp/
+   Body: {"otp": "<RENTER_OTP>"}
+EXPECTED RESULT:
+- Rental status transitions from READY_FOR_HANDOVER to ACTIVE.
+- Rental clock officially begins.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 4: ROLE 3 — RENTER TEST SCENARIOS (DISCOVERY, BOOKING, ESCROW & OTP)
+================================================================================
+
+--------------------------------------------------------------------------------
+Q 3.1: How does a Renter discover equipment by City and Category?
+--------------------------------------------------------------------------------
+STEPS IN WEB BROWSER:
+1. Open http://localhost:3000/
+2. Use the City Selector dropdown in the navbar (or hero section) to select "Bangalore" or "Mumbai".
+3. Click on any category card in the Category Explorer grid (e.g. "Cameras & Optics", "Drones", "Workstations").
+EXPECTED RESULT:
+- The equipment grid instantly filters to display matching verified gear in that city.
+- Each listing card displays the equipment image, verified owner badge, daily rental rate, and refundable escrow deposit pill.
+
+--------------------------------------------------------------------------------
+Q 3.2: How does a Renter check owner trust scores and reputation tiers?
+--------------------------------------------------------------------------------
+STEPS:
+1. On any listing card, hover over or inspect the trust score pill (e.g. "⭐ Gold Owner · 620 pts").
+2. Click "Trust Score" in the top navigation bar.
+EXPECTED RESULT:
+- The "Rentido Trust & Reputation Engine" modal opens.
+- Displays a visual 0–1000 gauge and details the 4 tiers:
+  * Bronze (0–299): New participant, standard escrow deposit
+  * Silver (300–499): Established member, verified identity
+  * Gold (500–699): Elite reliability, -25% reduced escrow deposit
+  * Platinum (700–1000): Marketplace VIP, -50% deposit reduction, instant booking
+
+--------------------------------------------------------------------------------
+Q 3.3: How does a Renter book equipment with dynamic duration and fulfillment?
+--------------------------------------------------------------------------------
+STEPS:
+1. On any listing card (e.g. "Sony FX3 Full-Frame Cinema Camera"), click "Book Now & Hold Deposit".
+2. The interactive Booking Modal appears:
+   - Select Rental Duration: Click "2 Days" or "3 Days".
+   - Select Fulfillment: Toggle between "Doorstep Delivery (+₹150)" and "Free Self-Pickup (₹0)".
+EXPECTED RESULT:
+- The line-item price breakdown recalculates in real-time before your eyes:
+  * Base Rent:               ₹2,800 x 2 = ₹5,600
+  * Platform Trust Fee:      ₹100
+  * Fulfillment:             ₹150 (Delivery) or ₹0 (Pickup)
+  * Refundable Escrow Deposit: ₹15,000 (Held in escrow)
+  * Total Payable:           ₹20,850
+
+--------------------------------------------------------------------------------
+Q 3.4: How does a Renter apply coupon code "WELCOME20" for instant savings?
+--------------------------------------------------------------------------------
+STEPS:
+1. In the Booking Modal promo code input box, type: WELCOME20
+2. Click "Apply".
+EXPECTED RESULT:
+- Green badge appears: "✓ WELCOME20 applied (-₹1,000.00)"
+- Total payable amount is immediately discounted by ₹1,000.00!
+
+--------------------------------------------------------------------------------
+Q 3.5: How does a Renter confirm booking and receive their Handover OTP?
+--------------------------------------------------------------------------------
+STEPS:
+1. Click the primary button: "Confirm Booking & Authorize Escrow".
+2. (If not signed in, the authentication modal will prompt you to 1-click sign in).
+EXPECTED RESULT:
+- Instant booking confirmation screen opens.
+- Displays the **Mutual Handover OTP** (e.g. "9482").
+- Displays explicit escrow protection instructions:
+  "Share this secure 4-digit OTP with the equipment owner only after you have
+   physically inspected the serial number and tested equipment functionality."
+- The booking is added to your Participant Dashboard.
+
+--------------------------------------------------------------------------------
+Q 3.6: How does a Renter request a rental period extension?
+--------------------------------------------------------------------------------
+STEPS VIA API / DASHBOARD:
+1. Send POST to /api/rentals/{rental_id}/request-extension/
+   Body:
+   {
+     "extension_end_datetime": "2026-09-10T18:00:00Z"
+   }
+EXPECTED RESULT:
+- Availability engine validates that no double-booking exists for the extended dates.
+- Pricing engine calculates the additional rental days.
+- A new RentalExtension record is generated without altering the original booking record.
+
+--------------------------------------------------------------------------------
+Q 3.7: How does a Renter return equipment and complete digital inspection?
+--------------------------------------------------------------------------------
+STEPS:
+1. Renter clicks "Request Return" on their booking.
+2. Return inspection checklist is submitted via POST /api/inspections/:
+   Body:
+   {
+     "rental_id": 1,
+     "inspection_type": "RETURN",
+     "condition_grade": "GOOD",
+     "checklist_data": {
+       "body_scratches": "None",
+       "lens_elements_clean": true,
+       "all_batteries_present": true,
+       "sensor_functional": true
+     }
+   }
+EXPECTED RESULT:
+- If no damage is reported, the SecurityDeposit is marked RELEASED.
+- Renter receives 100% of their held deposit back in their account.
+- Renter's Trust Score increases by +15 points for a successful, on-time rental!
+
+--------------------------------------------------------------------------------
+Q 3.8: How does a Renter submit a review for the Owner and Equipment?
+--------------------------------------------------------------------------------
+STEPS:
+1. Send POST to /api/reviews/:
+   Body:
+   {
+     "rental_id": 1,
+     "reviewee_type": "OWNER",
+     "rating": 5,
+     "comment": "Exceptional condition, clean sensor, friendly handover. Highly recommended!"
+   }
+EXPECTED RESULT:
+- Review is linked to Owner profile.
+- Owner rating recalculates.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 5: ROLE 4 — LOGISTICS DRIVER TEST SCENARIOS (2-STAGE OTP DELIVERY)
+================================================================================
+
+--------------------------------------------------------------------------------
+Q 4.1: How does a Driver register a fleet vehicle?
+--------------------------------------------------------------------------------
+STEPS VIA API:
+1. Authenticate as arun.driver@rentido.com.
+2. POST /api/vehicles/
+   Body:
+   {
+     "vehicle_type": "MINI_TRUCK",
+     "make": "Tata",
+     "model": "Ace Gold (Chota Hathi)",
+     "registration_number": "KA-01-EQ-9922",
+     "max_payload_kg": 1000.00,
+     "cargo_length_cm": 220,
+     "cargo_width_cm": 150,
+     "cargo_height_cm": 140,
+     "is_active": true
+   }
+EXPECTED RESULT:
+- Vehicle registered and verified for commercial equipment logistics transport.
+
+--------------------------------------------------------------------------------
+Q 4.2: How does a Driver execute Stage 1: Pickup from Owner with Pickup OTP?
+--------------------------------------------------------------------------------
+STEPS:
+1. Driver arrives at Owner location (e.g. Apex Cinema Rentals, Indiranagar).
+2. Inspects physical gear, takes pre-transit loading photo.
+3. Asks Owner for the Stage 1 Pickup OTP.
+4. POST /api/delivery/{delivery_id}/verify-pickup-otp/
+   Body:
+   {
+     "pickup_otp": "<OWNER_PICKUP_OTP>",
+     "transit_photo_url": "https://storage.rentido.com/transit/pre_load_01.jpg"
+   }
+EXPECTED RESULT:
+- Delivery status transitions to IN_TRANSIT.
+- Owner receives receipt that gear has been safely handed to Rentido logistics fleet.
+
+--------------------------------------------------------------------------------
+Q 4.3: How does a Driver execute Stage 2: Drop-off to Renter with Delivery OTP?
+--------------------------------------------------------------------------------
+STEPS:
+1. Driver arrives at Renter destination.
+2. Unloads gear, tests basic power-on with Renter.
+3. Renter verifies package and shares their Stage 2 Delivery OTP.
+4. POST /api/delivery/{delivery_id}/verify-delivery-otp/
+   Body:
+   {
+     "delivery_otp": "<RENTER_DELIVERY_OTP>"
+   }
+EXPECTED RESULT:
+- Delivery status transitions to DELIVERED.
+- Rental status transitions to ACTIVE.
+- Driver transport payout is credited to driver payable ledger account.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 6: ROLE 5 — SERVICE PROVIDER / REPAIR TEST SCENARIOS
+================================================================================
+
+--------------------------------------------------------------------------------
+Q 6.1: How does a Repair Specialist register their workshop profile?
+--------------------------------------------------------------------------------
+STEPS:
+1. Authenticate as ramesh.service@rentido.com.
+2. POST /api/providers/
+   Body:
+   {
+     "business_name": "ProLens Cinema Optics & Sensor Care",
+     "city": "Bangalore",
+     "service_category": "Camera & Optical Repair",
+     "years_of_experience": 12,
+     "hourly_labor_rate": 800.00,
+     "diagnostic_fee": 300.00
+   }
+EXPECTED RESULT:
+- Service Provider profile created and ready to receive repair quote requests.
+
+--------------------------------------------------------------------------------
+Q 6.2: How does a Service Provider submit a damage repair quote?
+--------------------------------------------------------------------------------
+STEPS:
+1. When a post-return damage report is created (e.g. damaged zoom ring), the
+   service provider submits an itemized quote:
+2. POST /api/repairs/quotes/
+   Body:
+   {
+     "repair_request_id": 1,
+     "estimated_labor_cost": 1200.00,
+     "estimated_parts_cost": 2300.00,
+     "turnaround_days": 2,
+     "repair_description": "Replace damaged lens gear ring and recalibrate optical collimator."
+   }
+EXPECTED RESULT:
+- Quote recorded with total ₹3,500.
+- Admin / Owner can approve quote, drawing funds from held escrow deposit.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 7: ADVANCED API TESTING (CURL / POSTMAN / SWAGGER)
+================================================================================
+
+1. Interactive OpenAPI Swagger UI:
+   URL: http://127.0.0.1:8000/api/docs/
+   Click "Authorize" -> enter "Bearer <TOKEN>" to execute any endpoint interactively.
+
+2. Test Razorpay Order Creation via cURL:
+   curl -X POST http://127.0.0.1:8000/api/payments/razorpay/create-order/ \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <RENTER_TOKEN>" \
+     -d '{"rental_id": 1}'
+
+3. Test Razorpay HMAC-SHA256 Signature Verification:
+   curl -X POST http://127.0.0.1:8000/api/payments/razorpay/verify/ \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <RENTER_TOKEN>" \
+     -d '{
+       "rental_id": 1,
+       "razorpay_order_id": "order_test_123",
+       "razorpay_payment_id": "pay_test_456",
+       "razorpay_signature": "<HMAC_SHA256_HEX>"
+     }'
+
+4. Test Stripe PaymentIntent Creation:
+   curl -X POST http://127.0.0.1:8000/api/payments/stripe/create-intent/ \
+     -H "Content-Type: application/json" \
+     -H "Authorization: Bearer <RENTER_TOKEN>" \
+     -d '{"rental_id": 1, "currency": "inr"}'
+
+5. Test Owner Earnings Summary:
+   curl -X GET http://127.0.0.1:8000/api/payments/ledger/owner-summary/ \
+     -H "Authorization: Bearer <OWNER_TOKEN>"
+
+6. Test Instant Owner Payout Request:
+   curl -X POST http://127.0.0.1:8000/api/payments/ledger/request-payout/ \
+     -H "Authorization: Bearer <OWNER_TOKEN>"
+--------------------------------------------------------------------------------
+
+
+================================================================================
+PART 8: AUTOMATED REGRESSION SUITE VERIFICATION COMMANDS
+================================================================================
+
+Run full automated test suite (52 tests across 14 apps):
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py test
+
+Run individual domain app tests:
+..\.venv\Scripts\python manage.py test apps.users
+..\.venv\Scripts\python manage.py test apps.categories
+..\.venv\Scripts\python manage.py test apps.assets
+..\.venv\Scripts\python manage.py test apps.listings
+..\.venv\Scripts\python manage.py test apps.rentals
+..\.venv\Scripts\python manage.py test apps.payments
+..\.venv\Scripts\python manage.py test apps.inspections
+..\.venv\Scripts\python manage.py test apps.logistics
+..\.venv\Scripts\python manage.py test apps.services
+..\.venv\Scripts\python manage.py test apps.reviews
+..\.venv\Scripts\python manage.py test apps.trust
+..\.venv\Scripts\python manage.py test apps.notifications
+..\.venv\Scripts\python manage.py test apps.promotions
+..\.venv\Scripts\python manage.py test apps.audit
+
+Verify Next.js Frontend Production Build:
+cd C:\Users\javak\project-nithish\rentido_frontend
+npm run build
+
+Expected Result:
+All 52 tests PASS (100% green). Frontend compiles in ~1s with 0 errors.
+================================================================================
