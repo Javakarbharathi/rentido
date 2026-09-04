@@ -499,4 +499,69 @@ Expected Result:
 GitHub repository synchronized with Phase 7 deliverables.
 --------------------------------------------------------------------------------
 
+================================================================================
+STEP 29: PROMOTIONS, COUPONS & DYNAMIC SURGE PRICING (PHASE 8)
+================================================================================
+Purpose: Provide promotional discount coupon engine (percentage with optional cap,
+flat discount, minimum rental amount, usage limits) and dynamic surge pricing rules
+(city, category, multiplier) integrated directly into the core PricingEngine.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET   /api/coupons/                             -> Browse active public coupons
+- GET   /api/coupons/{id}/                        -> Retrieve coupon details
+- POST  /api/coupons/validate/                    -> Preview discount and new rental total before booking
+- GET   /api/surge-rules/                         -> List active surge pricing rules
+
+Key Capabilities:
+- PERCENTAGE & FLAT discount types with max discount cap and minimum order value
+- Surge multipliers e.g. 1.25x for peak festival dates / weekend studio rushes
+- Real-time deduction applied at checkout without affecting owner base payout
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 30: REFERRAL PROGRAM & REWARDS (PHASE 8)
+================================================================================
+Purpose: Unique referral code generation for each registered user, claiming referral
+links, and automatically awarding trust points upon first completed rental.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/referrals/me/                         -> Retrieve user's unique referral code, share link & stats
+- POST /api/referrals/claim/                      -> Claim a friend's referral code upon joining
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 31: EXECUTE COMPREHENSIVE REGRESSION TEST SUITE (41/41 PASS)
+================================================================================
+Purpose: Run automated test suite across all 13 domain applications on MySQL 8.0.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics apps.services apps.reviews apps.trust apps.notifications apps.promotions
+
+Expected Result:
+Ran 41 tests in ~39s ... OK
+All 13 apps passing with 100% integrity.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 32: COMMIT AND SYNC PHASE 8 TO GITHUB
+================================================================================
+Purpose: Stage and commit promotions, coupons, dynamic surge pricing, and referral
+system to the remote repository.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+git add .
+git commit -m "feat: implement promotions, coupons, dynamic surge pricing, and referral engine"
+git push origin main
+
+Expected Result:
+GitHub repository synchronized with Phase 8 deliverables.
+--------------------------------------------------------------------------------
+
+
 

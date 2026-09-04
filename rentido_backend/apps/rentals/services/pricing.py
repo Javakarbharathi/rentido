@@ -58,12 +58,18 @@ class PricingEngine:
         return rule
 
     @classmethod
-    def calculate_pricing(cls, listing, start_datetime, end_datetime, fulfillment_type=FulfillmentType.SELF_PICKUP):
+    def calculate_pricing(cls, listing, start_datetime, end_datetime, fulfillment_type=FulfillmentType.SELF_PICKUP, user=None, coupon_code=None):
         """
-        Returns a dictionary with complete pricing calculation breakdown.
+        Returns a dictionary with complete pricing calculation breakdown including dynamic surge and coupons.
         """
         units = cls.calculate_duration(start_datetime, end_datetime, listing.pricing_model)
-        base_rental_amount = Decimal(units) * listing.rental_price
+        
+        # Check dynamic surge pricing
+        from apps.promotions.services.promotions import PromotionService
+        surge_multiplier = PromotionService.get_surge_multiplier(
+            city=listing.city, category=listing.asset.category, target_datetime=start_datetime
+        )
+        base_rental_amount = (Decimal(units) * listing.rental_price * surge_multiplier).quantize(Decimal('0.01'))
 
         # Determine commission rate & amount
         rule = cls.get_commission_rule(listing.asset.category)
@@ -85,6 +91,17 @@ class PricingEngine:
 
         commission_amount = commission_amount.quantize(Decimal('0.01'))
 
+        # Coupon Discount calculation
+        discount_amount = Decimal('0.00')
+        coupon_applied_code = None
+        coupon_message = None
+        if coupon_code:
+            coupon_res = PromotionService.validate_coupon(coupon_code, user, base_rental_amount)
+            if coupon_res['valid']:
+                discount_amount = coupon_res['discount']
+                coupon_applied_code = coupon_res['code']
+                coupon_message = coupon_res['message']
+
         # Delivery fee
         if fulfillment_type == FulfillmentType.DRIVER_DELIVERY:
             delivery_fee = cls.DEFAULT_DELIVERY_FEE
@@ -97,8 +114,9 @@ class PricingEngine:
         # Security Deposit (Held, not platform revenue)
         security_deposit = listing.security_deposit
 
-        # Total paid by Renter at checkout
-        total_amount_paid = (base_rental_amount + platform_fee + delivery_fee + security_deposit).quantize(Decimal('0.01'))
+        # Total paid by Renter at checkout (base rent after discount + fees + deposit)
+        effective_rent = max(base_rental_amount - discount_amount, Decimal('0.00'))
+        total_amount_paid = (effective_rent + platform_fee + delivery_fee + security_deposit).quantize(Decimal('0.01'))
 
         # Payout due to owner (rental minus platform commission)
         owner_payout_amount = (base_rental_amount - commission_amount).quantize(Decimal('0.01'))
@@ -107,6 +125,10 @@ class PricingEngine:
             'units': units,
             'pricing_model': listing.pricing_model,
             'base_rental_amount': base_rental_amount,
+            'surge_multiplier': surge_multiplier,
+            'discount_amount': discount_amount,
+            'coupon_code': coupon_applied_code,
+            'coupon_message': coupon_message,
             'platform_commission_rate': commission_rate,
             'platform_commission_amount': commission_amount,
             'platform_fee': platform_fee,
@@ -123,3 +145,4 @@ class PricingEngine:
                 'calculated_at': timezone.now().isoformat()
             }
         }
+

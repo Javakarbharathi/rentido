@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/', include('apps.reviews.urls', namespace='reviews')),
     path('api/', include('apps.trust.urls', namespace='trust')),
     path('api/', include('apps.notifications.urls', namespace='notifications')),
+    path('api/', include('apps.promotions.urls', namespace='promotions')),
     
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
