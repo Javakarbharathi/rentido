@@ -681,6 +681,57 @@ npm run dev -- -p 3000
 
 Access URL:
 - Rentido Web Application: http://localhost:3000/
+================================================================================
+STEP 38: POPULATE REALISTIC MARKETPLACE DEMO DATA (OPTION 1)
+================================================================================
+Purpose: Seed production-grade, realistic marketplace catalog data into MySQL 8.0,
+including commercial categories, dynamic commission rules, verified participants
+(owners, renters, logistics drivers), physical assets, rental listings, promotional
+discount coupons, and dynamic surge pricing rules.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Seed Catalog Highlights:
+1. 8 Industry Categories:
+   - Cameras & Optics (10% commission, min Rs. 50, max Rs. 1500)
+   - Drones & Aerial Cinematography
+   - Laptops & Workstations
+   - Studio Audio & DJ Sound
+   - Gaming & VR Consoles
+   - Electric Mobility & E-Bikes
+   - Power Tools & Industrial
+   - Camping & Outdoor Expeditions
+2. Verified Marketplace Users & Profiles:
+   - Rajesh Sharma (Owner, Bangalore - Apex Cinema Rentals, Gold Tier 620 pts)
+   - Priya Mehta (Owner, Mumbai - TechVault Solutions, Platinum Tier 740 pts)
+   - Ananya Verma (Renter, Bangalore - KYC Verified, Silver Tier 240 pts)
+   - Arun Kumar (Logistics Driver, Bangalore)
+3. 8 High-Value Commercial Equipment Listings:
+   - Sony FX3 Full-Frame Cinema Camera (Rs. 2,800/day, Rs. 15,000 deposit)
+   - Canon EOS R5 8K Mirrorless Kit (Rs. 2,500/day, Rs. 12,000 deposit)
+   - Apple MacBook Pro 16" M3 Max (Rs. 2,200/day, Rs. 20,000 deposit)
+   - DJI Mavic 3 Pro Cine Combo Drone (Rs. 3,200/day, Rs. 18,000 deposit)
+   - Shure SM7B Studio Vocal Mic + Cloudlifter (Rs. 850/day, Rs. 5,000 deposit)
+   - Sony PlayStation 5 + PS VR2 Headset (Rs. 1,400/day, Rs. 8,000 deposit)
+   - EMotorad T-Rex Pro Electric Mountain Bike (Rs. 600/day, Rs. 4,000 deposit)
+   - Bosch Professional Rotary Hammer Drill Kit (Rs. 550/day, Rs. 3,000 deposit)
+4. Active Promotional Discount Coupons:
+   - WELCOME20: 20% off up to Rs. 1,000 (Min order: Rs. 500)
+   - FREEDELIVERY: Flat Rs. 150 off delivery fee (Min order: Rs. 500)
+   - FESTIVE500: Flat Rs. 500 off (Min order: Rs. 2,500)
+5. Dynamic Surge Rule:
+   - "Diwali Weekend Cinema Rush": 1.15x multiplier on Cameras & Optics in Bangalore
+
+Command:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py seed_marketplace
+
+Expected Result:
+[OK] Created 8 categories and commission rules.
+[OK] Seeded verified Owner, Renter, Driver, and Trust Profiles.
+[OK] Seeded 8 physical assets and commercial listings.
+[OK] Seeded promotional coupons (WELCOME20, FREEDELIVERY, FESTIVE500).
+[OK] Seeded dynamic surge pricing rule.
+[SUCCESS] MARKETPLACE DATA SEEDED SUCCESSFULLY!
 --------------------------------------------------------------------------------
 
 
