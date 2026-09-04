@@ -219,31 +219,62 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 13: EXECUTE AUTOMATED INTEGRATION TEST SUITE
+STEP 13: AVAILABILITY ENGINE & PRICING ENGINE
 ================================================================================
-Purpose: Run test coverage across Users, Categories, Assets, and Listings.
+Purpose: Prevent double bookings across calendar timeframes and compute complete
+pricing breakdowns with dynamic category commissions, delivery fees, and held deposits.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Services:
+- AvailabilityService: Validates no overlapping active reservations exist for the physical asset.
+- PricingEngine: Calculates duration units, base rental cost, category-based commission, platform fee, delivery, and security deposit.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 14: RENTAL BOOKING & LIFECYCLE STATE MACHINE APIS
+================================================================================
+Purpose: Complete rental transaction engine with OTP handover/return, immutable
+pricing snapshots, and multi-stage lifecycle transitions.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- POST /api/rentals/quote/                 -> Price preview before reserving
+- POST /api/rentals/book/                  -> Book reservation & freeze pricing snapshot
+- POST /api/rentals/{id}/confirm-payment/  -> Move status: PAYMENT_PENDING -> CONFIRMED
+- POST /api/rentals/{id}/handover/         -> Verify Handover OTP -> status: ACTIVE
+- POST /api/rentals/{id}/request-return/   -> Renter requests return -> RETURN_REQUESTED
+- POST /api/rentals/{id}/return/           -> Verify Return OTP -> status: COMPLETED
+- GET  /api/rentals/                       -> List user's rentals (as renter or owner)
+- GET  /api/rentals/{id}/                  -> Detailed rental view with pricing snapshot
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 15: EXECUTE AUTOMATED TEST SUITE (12/12 PASS)
+================================================================================
+Purpose: Run test coverage across all domain apps on MySQL.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals
 
 Expected Result:
-Ran 9 tests in ~7.8s ... OK
+Ran 12 tests in ~12s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 14: COMMIT AND SYNC STEP 3 TO GITHUB
+STEP 16: COMMIT AND SYNC STEP 4 TO GITHUB
 ================================================================================
-Purpose: Stage and commit Category, Asset, and Listing engines to GitHub.
+Purpose: Stage and commit Availability Engine, Pricing Engine, and Rental
+State Machine to the remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement categories, physical assets, and marketplace listings engine"
+git commit -m "feat: implement availability engine, pricing engine, and rental lifecycle state machine"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Step 3 deliverables.
+GitHub repository synchronized with Step 4 deliverables.
 --------------------------------------------------------------------------------

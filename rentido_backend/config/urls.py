@@ -21,6 +21,7 @@ urlpatterns = [
     path('api/', include('apps.categories.urls', namespace='categories')),
     path('api/', include('apps.assets.urls', namespace='assets')),
     path('api/', include('apps.listings.urls', namespace='listings')),
+    path('api/', include('apps.rentals.urls', namespace='rentals')),
     
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
