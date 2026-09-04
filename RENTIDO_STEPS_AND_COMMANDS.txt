@@ -732,6 +732,59 @@ Expected Result:
 [OK] Seeded promotional coupons (WELCOME20, FREEDELIVERY, FESTIVE500).
 [OK] Seeded dynamic surge pricing rule.
 [SUCCESS] MARKETPLACE DATA SEEDED SUCCESSFULLY!
+================================================================================
+STEP 39: DOCKERIZE & PRODUCTION DEPLOYMENT BLUEPRINT (OPTION 3)
+================================================================================
+Purpose: Provide production-grade containerization and multi-container orchestration
+for the entire Rentido platform stack using Docker, Docker Compose, Gunicorn,
+Redis, Celery Workers, Celery Beat, Next.js 16, and Nginx.
+Working Directory: C:\Users\javak\project-nithish
+
+Architecture & Container Services:
+1. rentido_mysql (db):
+   - Image: mysql:8.0
+   - Healthcheck: mysqladmin ping on port 3306
+   - Persistent Volume: mysql_data:/var/lib/mysql
+2. rentido_redis (redis):
+   - Image: redis:7-alpine
+   - In-memory cache & Celery message broker
+   - Persistent Volume: redis_data:/data
+3. rentido_api (web):
+   - Multi-stage Python 3.12-slim build
+   - WSGI HTTP Server: Gunicorn (3 workers, 120s timeout)
+   - Auto-executes entrypoint.sh (waits for MySQL, applies migrations, collects static)
+   - Exposes: 8000
+4. rentido_celery_worker (celery_worker):
+   - Asynchronous job execution (notifications, emails, async tasks)
+   - Concurrency: 4 worker processes
+5. rentido_celery_beat (celery_beat):
+   - Periodic cron scheduler (upcoming returns, overdue rentals, expired bookings)
+6. rentido_frontend (frontend):
+   - Multi-stage Node.js 20-alpine build
+   - Next.js 16 SSR & Static rendering running under unprivileged 'nextjs' user
+   - Exposes: 3000
+7. rentido_nginx (nginx):
+   - Alpine Nginx reverse proxy on port 80
+   - Reverse proxies /api/ & /admin/ to web:8000
+   - Serves /static/ and /media/ directly from shared Docker volumes
+   - Reverse proxies / and /_next/ (WebSockets) to frontend:3000
+
+Commands:
+# Validate orchestration blueprint syntax
+docker compose config
+
+# Build and launch all 7 services in detached mode
+docker compose up --build -d
+
+# Inspect live logs across all services
+docker compose logs -f web celery_worker frontend
+
+# Stop containers gracefully
+docker compose down
+
+Expected Result:
+All 7 microservices spin up healthy and connected via internal bridge network 'rentido_net'.
+Nginx serves the unified application at http://localhost/ with API at http://localhost/api/.
 --------------------------------------------------------------------------------
 
 

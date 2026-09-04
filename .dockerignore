@@ -1,0 +1,7 @@
+.git
+.gitignore
+.env
+.venv/
+node_modules/
+.next/
+*.log

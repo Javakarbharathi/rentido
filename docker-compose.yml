@@ -1,0 +1,174 @@
+services:
+  # 1. MySQL 8.0 Database
+  db:
+    image: mysql:8.0
+    container_name: rentido_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-rentido}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root123}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - rentido_net
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DB_PASSWORD:-root123}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+
+  # 2. Redis 7 Cache & Celery Broker
+  redis:
+    image: redis:7-alpine
+    container_name: rentido_redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
+    networks:
+      - rentido_net
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # 3. Django Web API (Gunicorn WSGI)
+  web:
+    build:
+      context: ./rentido_backend
+      dockerfile: Dockerfile
+    container_name: rentido_api
+    restart: unless-stopped
+    command: gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi:application
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-rentido-production-docker-secret-key-super-secure-2026}
+      DJANGO_DEBUG: ${DJANGO_DEBUG:-False}
+      DJANGO_ALLOWED_HOSTS: ${DJANGO_ALLOWED_HOSTS:-localhost,127.0.0.1,web,nginx}
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: ${DB_NAME:-rentido}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root123}
+      DB_HOST: db
+      DB_PORT: "3306"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_ALWAYS_EAGER: "False"
+      CORS_ALLOWED_ORIGINS: http://localhost,http://localhost:3000,http://127.0.0.1:3000
+    volumes:
+      - django_static:/app/staticfiles
+      - django_media:/app/media
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - rentido_net
+    expose:
+      - "8000"
+
+  # 4. Celery Asynchronous Worker
+  celery_worker:
+    build:
+      context: ./rentido_backend
+      dockerfile: Dockerfile
+    container_name: rentido_celery_worker
+    restart: unless-stopped
+    command: celery -A config worker -l info --concurrency=4
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-rentido-production-docker-secret-key-super-secure-2026}
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: ${DB_NAME:-rentido}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root123}
+      DB_HOST: db
+      DB_PORT: "3306"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_ALWAYS_EAGER: "False"
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - rentido_net
+
+  # 5. Celery Beat Periodic Scheduler
+  celery_beat:
+    build:
+      context: ./rentido_backend
+      dockerfile: Dockerfile
+    container_name: rentido_celery_beat
+    restart: unless-stopped
+    command: celery -A config beat -l info
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-rentido-production-docker-secret-key-super-secure-2026}
+      DB_ENGINE: django.db.backends.mysql
+      DB_NAME: ${DB_NAME:-rentido}
+      DB_USER: ${DB_USER:-root}
+      DB_PASSWORD: ${DB_PASSWORD:-root123}
+      DB_HOST: db
+      DB_PORT: "3306"
+      CELERY_BROKER_URL: redis://redis:6379/0
+      CELERY_RESULT_BACKEND: redis://redis:6379/0
+      CELERY_ALWAYS_EAGER: "False"
+    depends_on:
+      web:
+        condition: service_started
+      redis:
+        condition: service_healthy
+    networks:
+      - rentido_net
+
+  # 6. Next.js 16 Frontend Web Application
+  frontend:
+    build:
+      context: ./rentido_frontend
+      dockerfile: Dockerfile
+    container_name: rentido_frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://localhost/api
+      PORT: "3000"
+    networks:
+      - rentido_net
+    expose:
+      - "3000"
+
+  # 7. Nginx Production Reverse Proxy
+  nginx:
+    build:
+      context: ./nginx
+      dockerfile: Dockerfile
+    container_name: rentido_nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - django_static:/app/staticfiles:ro
+      - django_media:/app/media:ro
+    depends_on:
+      - web
+      - frontend
+    networks:
+      - rentido_net
+
+volumes:
+  mysql_data:
+    driver: local
+  redis_data:
+    driver: local
+  django_static:
+    driver: local
+  django_media:
+    driver: local
+
+networks:
+  rentido_net:
+    driver: bridge
