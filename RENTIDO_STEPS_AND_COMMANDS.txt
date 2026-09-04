@@ -81,7 +81,8 @@ rentido_backend/
 │   ├── listings/
 │   ├── rentals/
 │   ├── payments/
-│   └── inspections/
+│   ├── inspections/
+│   └── logistics/
 └── common/
 --------------------------------------------------------------------------------
 
@@ -118,7 +119,7 @@ Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals payments inspections
+..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals payments inspections logistics
 ..\.venv\Scripts\python manage.py migrate
 
 Expected Result:
@@ -130,6 +131,7 @@ All migrations applied (OK) across:
 - rentals (Rental, RentalPricingSnapshot, RentalExtension)
 - payments (Payment, SecurityDeposit, LedgerEntry)
 - inspections (Inspection, InspectionMedia, DamageReport)
+- logistics (Vehicle, DeliveryOrder, TransportProof, LogisticsCommissionRule)
 --------------------------------------------------------------------------------
 
 ================================================================================
@@ -270,32 +272,50 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 16: EXECUTE AUTOMATED TEST SUITE (16/16 PASS)
+STEP 16: RENTIDO LOGISTICS & DRIVER DISPATCH SYSTEM
 ================================================================================
-Purpose: Run test coverage across all domain apps on MySQL.
+Purpose: Fleet vehicle registration (bikes, cars, mini trucks), driver dispatch,
+photographic transport condition tracking, and two-stage OTP delivery verification.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/vehicles/                        -> List driver vehicles
+- POST /api/vehicles/                        -> Register vehicle (auto-assigns DRIVER role)
+- POST /api/vehicles/{id}/verify/            -> Admin vehicle verification
+- GET  /api/deliveries/                      -> List available or assigned delivery orders
+- POST /api/deliveries/{id}/accept/          -> Driver accepts delivery order with vehicle
+- POST /api/deliveries/{id}/verify-pickup/   -> Driver verifies Pickup OTP at Owner location
+- POST /api/deliveries/{id}/upload-proof/    -> Upload transport condition photo
+- POST /api/deliveries/{id}/verify-delivery/ -> Driver verifies Delivery OTP at Customer location (activates rental)
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 17: EXECUTE AUTOMATED TEST SUITE (18/18 PASS)
+================================================================================
+Purpose: Run full automated test coverage across all 8 domain apps on MySQL.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics
 
 Expected Result:
-Ran 16 tests in ~19s ... OK
+Ran 18 tests in ~25s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 17: COMMIT AND SYNC PHASE 2 TO GITHUB
+STEP 18: COMMIT AND SYNC PHASE 3 TO GITHUB
 ================================================================================
-Purpose: Stage and commit Payments, Ledger, Deposits, Inspections, and Damage
-reporting engines to the remote GitHub repository.
+Purpose: Stage and commit Logistics, Vehicle, Driver dispatch, and Transport
+proof tracking engines to the remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement financial ledger, security deposit escrow, and inspection damage system"
+git commit -m "feat: implement Rentido logistics, vehicle fleet, driver dispatch, and transport condition tracking"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Phase 2 deliverables.
+GitHub repository synchronized with Phase 3 deliverables.
 --------------------------------------------------------------------------------
