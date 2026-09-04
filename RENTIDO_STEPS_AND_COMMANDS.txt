@@ -144,35 +144,72 @@ All migrations applied (OK) to MySQL:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 8: SYSTEM INTEGRITY CHECK & SERVER VERIFICATION
+STEP 8: CREATE ADMIN SUPERUSER IN MYSQL
 ================================================================================
-Purpose: Ensure all Django app models, URLs, and MySQL connection pass validation.
+Purpose: Create the primary superuser account for logging into the Django Admin.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py check
-..\.venv\Scripts\python manage.py runserver
+..\.venv\Scripts\python manage.py shell -c "from apps.users.models import User, UserRole, RoleChoices; u = User.objects.create_superuser('admin', 'admin@rentido.com', 'adminpassword123'); UserRole.objects.create(user=u, role=RoleChoices.SUPER_ADMIN, is_active=True); print('Superuser ready')"
 
-Expected Result:
-"System check identified no issues (0 silenced)."
-Development server running at http://127.0.0.1:8000/
-Interactive Swagger UI available at http://127.0.0.1:8000/api/docs/
+Default Credentials:
+Email / Username: admin@rentido.com / admin
+Password: adminpassword123
+Role: SUPER_ADMIN
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 9: COMMIT AND SYNC CODEBASE TO GITHUB
+STEP 9: IMPLEMENT AUTHENTICATION & MULTI-ROLE USER APIS (JWT)
 ================================================================================
-Purpose: Stage updated dependencies, .env.example, and MySQL configurations
-(ignoring sensitive .env file), commit, and push to GitHub repository.
+Purpose: Build and expose REST API endpoints for user registration, JWT login,
+token refresh, user profile retrieval, and dynamic role activation.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints Available:
+- POST /api/auth/register/     -> Register new user (auto-provisions Renter/Owner profile)
+- POST /api/auth/login/        -> JWT Login (returns access, refresh, roles & user payload)
+- POST /api/auth/token/refresh/-> Refresh access token
+- GET  /api/auth/me/           -> Get current authenticated user profile
+- POST /api/auth/me/roles/add/ -> Add an extra role (e.g. Renter becomes Owner)
+- GET  /api/docs/              -> Interactive Swagger UI for testing endpoints
+
+Verification Command:
+..\.venv\Scripts\python manage.py test apps.users
+
+Expected Result:
+"Ran 3 tests ... OK"
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 10: RUN DEVELOPMENT SERVER & TEST APIS
+================================================================================
+Purpose: Launch the Rentido local development server and access Admin and API docs.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py runserver
+
+URLs:
+- Admin Panel: http://127.0.0.1:8000/admin/
+- Swagger API Docs: http://127.0.0.1:8000/api/docs/
+- ReDoc Docs: http://127.0.0.1:8000/api/redoc/
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 11: COMMIT AND SYNC STEP 2 TO GITHUB
+================================================================================
+Purpose: Stage updated serializers, views, test suite, and guides, commit,
+and push to the remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: configure MySQL 8.0 connection and apply migrations to rentido db"
+git commit -m "feat: implement JWT auth, multi-role user profile system, and test suite"
 git push origin main
 
 Expected Result:
-GitHub repository updated with MySQL configuration and setup guide.
+GitHub repository synchronized with Phase 1 Step 2 deliverables.
 --------------------------------------------------------------------------------

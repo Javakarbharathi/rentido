@@ -14,6 +14,9 @@ from drf_spectacular.views import (
 urlpatterns = [
     path('admin/', admin.site.urls),
     
+    # Auth & Identity Endpoints
+    path('api/auth/', include('apps.users.urls', namespace='users')),
+    
     # API Documentation (Swagger & ReDoc)
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
