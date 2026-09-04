@@ -171,10 +171,22 @@ export default function OwnerStudioModal({
           onListingCreated();
           loadOwnerData();
         } else {
-          setErrorMsg(listingRes.detail || JSON.stringify(listingRes));
+          const detail = listingRes.detail || JSON.stringify(listingRes);
+          if (detail.toLowerCase().includes('token') && detail.toLowerCase().includes('not valid')) {
+            setErrorMsg('Your session has expired. Please sign in again to publish.');
+            onOpenAuth();
+          } else {
+            setErrorMsg(detail);
+          }
         }
       } else {
-        setErrorMsg(assetRes.detail || JSON.stringify(assetRes));
+        const detail = assetRes.detail || JSON.stringify(assetRes);
+        if (detail.toLowerCase().includes('token') && detail.toLowerCase().includes('not valid')) {
+          setErrorMsg('Your session has expired. Please sign in again to publish.');
+          onOpenAuth();
+        } else {
+          setErrorMsg(detail);
+        }
       }
     } catch (err: any) {
       setErrorMsg(err.message || 'Error publishing listing. Please check API server.');

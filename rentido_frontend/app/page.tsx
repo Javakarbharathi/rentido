@@ -175,10 +175,57 @@ export default function Home() {
     loadData();
   }, [selectedCity]);
 
+  // Category mapping dictionary supporting both database slugs and fallback keyword matching
+  const CATEGORY_MAP: Record<string, string[]> = {
+    all: [],
+    cameras: ['cameras-optics', 'camera', 'optics', 'lens', 'sony fx3', 'canon eos', 'fx3', 'r5'],
+    drones: ['drones-aerial', 'drone', 'aerial', 'dji', 'mavic', 'cine'],
+    computers: ['laptops-workstations', 'laptop', 'workstation', 'macbook', 'apple', 'm3'],
+    audio: ['audio-studio', 'audio', 'studio', 'mic', 'microphone', 'shure', 'cloudlifter'],
+    gaming: ['gaming-vr', 'gaming', 'vr', 'playstation', 'ps5', 'quest', 'xbox'],
+    bikes: ['electric-mobility', 'mobility', 'e-bike', 'bike', 'cycle', 'scooter', 'emotorad'],
+    tools: ['power-tools', 'tool', 'drill', 'saw', 'industrial', 'bosch'],
+  };
+
   // Filter listings by search & category
   const filteredListings = listings.filter((l) => {
-    const matchesSearch = !searchQuery || l.title.toLowerCase().includes(searchQuery.toLowerCase()) || l.description.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+    // 1. Category filter
+    if (selectedCategory && selectedCategory !== 'all') {
+      const matchKeywords = CATEGORY_MAP[selectedCategory] || [selectedCategory];
+      const categorySlug = (l as any).asset?.category?.slug?.toLowerCase() || '';
+      const categoryName = (l as any).asset?.category?.name?.toLowerCase() || '';
+      const titleLower = l.title.toLowerCase();
+      const descLower = l.description.toLowerCase();
+
+      const matchesCat = matchKeywords.some(
+        (kw) =>
+          categorySlug.includes(kw) ||
+          categoryName.includes(kw) ||
+          titleLower.includes(kw) ||
+          descLower.includes(kw)
+      );
+      if (!matchesCat) return false;
+    }
+
+    // 2. Search query filter (word-by-word token matching)
+    if (searchQuery && searchQuery.trim()) {
+      const words = searchQuery.toLowerCase().trim().split(/\s+/);
+      const titleLower = l.title.toLowerCase();
+      const descLower = l.description.toLowerCase();
+      const cityLower = l.city?.toLowerCase() || '';
+      const areaLower = l.area?.toLowerCase() || '';
+
+      const matchesAllWords = words.every(
+        (word) =>
+          titleLower.includes(word) ||
+          descLower.includes(word) ||
+          cityLower.includes(word) ||
+          areaLower.includes(word)
+      );
+      if (!matchesAllWords) return false;
+    }
+
+    return true;
   });
 
   const handleLoginSuccess = (userData: any, accessToken: string) => {
@@ -245,13 +292,33 @@ export default function Home() {
       />
 
       {/* Marketplace Listings Section */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full">
+      <main id="marketplace-listings" className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full scroll-mt-24">
         
-        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mb-8 pb-4 border-b border-gray-100 gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mb-8 pb-4 border-b border-gray-100 gap-3">
           <div>
-            <h2 className="text-2xl font-black tracking-tight text-gray-950">
-              Verified Rental Equipment ({filteredListings.length})
-            </h2>
+            <div className="flex items-center gap-3">
+              <h2 className="text-2xl font-black tracking-tight text-gray-950">
+                Verified Rental Equipment ({filteredListings.length})
+              </h2>
+              {selectedCategory !== 'all' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedCategory('all')}
+                  className="text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>Category: {selectedCategory} ✕</span>
+                </button>
+              )}
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-xs text-indigo-700 hover:text-indigo-900 bg-indigo-50 border border-indigo-200 px-3 py-1 rounded-full font-bold flex items-center gap-1 cursor-pointer transition-colors"
+                >
+                  <span>Search: "{searchQuery}" ✕</span>
+                </button>
+              )}
+            </div>
             <p className="text-xs text-gray-700 mt-1">
               Every item has passed a physical serial inspection and is backed by double-blind OTP handover.
             </p>
@@ -395,6 +462,7 @@ export default function Home() {
         isOpen={isAdminPortalOpen}
         onClose={() => setIsAdminPortalOpen(false)}
         user={user}
+        token={token}
       />
 
     </div>

@@ -127,28 +127,101 @@ export async function fetchUnreadNotifications(token: string) {
   return await res.json();
 }
 
+export async function refreshAccessToken(refreshTokenStr?: string): Promise<string | null> {
+  const refresh = refreshTokenStr || (typeof window !== 'undefined' ? localStorage.getItem('rentido_refresh_token') : null);
+  if (!refresh) return null;
+
+  try {
+    const res = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh }),
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (data.access && typeof window !== 'undefined') {
+      localStorage.setItem('rentido_token', data.access);
+    }
+    return data.access || null;
+  } catch (err) {
+    return null;
+  }
+}
+
 export async function createAsset(token: string, assetData: any) {
-  const res = await fetch(`${API_BASE_URL}/assets/`, {
+  let activeToken = token;
+  let res = await fetch(`${API_BASE_URL}/assets/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${activeToken}`,
     },
     body: JSON.stringify(assetData),
   });
-  return await res.json();
+
+  // If token expired, attempt auto-refresh
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      activeToken = refreshed;
+      res = await fetch(`${API_BASE_URL}/assets/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeToken}`,
+        },
+        body: JSON.stringify(assetData),
+      });
+    }
+  }
+
+  const data = await res.json().catch(() => ({ detail: 'Failed to process asset registration.' }));
+  if (!res.ok && res.status === 401) {
+    return {
+      error: true,
+      code: 'token_not_valid',
+      detail: 'Your sign-in session has expired. Please sign in again to register equipment.',
+    };
+  }
+  return data;
 }
 
 export async function createListing(token: string, listingData: any) {
-  const res = await fetch(`${API_BASE_URL}/listings/`, {
+  let activeToken = token;
+  let res = await fetch(`${API_BASE_URL}/listings/`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${activeToken}`,
     },
     body: JSON.stringify(listingData),
   });
-  return await res.json();
+
+  // If token expired, attempt auto-refresh
+  if (res.status === 401) {
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      activeToken = refreshed;
+      res = await fetch(`${API_BASE_URL}/listings/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${activeToken}`,
+        },
+        body: JSON.stringify(listingData),
+      });
+    }
+  }
+
+  const data = await res.json().catch(() => ({ detail: 'Failed to process listing publication.' }));
+  if (!res.ok && res.status === 401) {
+    return {
+      error: true,
+      code: 'token_not_valid',
+      detail: 'Your sign-in session has expired. Please sign in again to publish listings.',
+    };
+  }
+  return data;
 }
 
 export async function fetchOwnerAssets(token: string) {
@@ -217,5 +290,68 @@ export async function addRole(token: string, role: string) {
   });
   return await res.json();
 }
+
+export async function fetchLedgerEntries(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/ledger/`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || data || [];
+  } catch (err) {
+    console.warn('Could not fetch ledger entries', err);
+    return [];
+  }
+}
+
+export async function fetchInspectionRecords(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/inspections/`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || data || [];
+  } catch (err) {
+    console.warn('Could not fetch inspection records', err);
+    return [];
+  }
+}
+
+export async function fetchDeliveryOrders(token: string) {
+  try {
+    const res = await fetch(`${API_BASE_URL}/deliveries/`, {
+      headers: { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || data || [];
+  } catch (err) {
+    console.warn('Could not fetch delivery orders', err);
+    return [];
+  }
+}
+
+export async function fetchSurgeRules(token?: string) {
+  try {
+    const headers: Record<string, string> = {};
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    const res = await fetch(`${API_BASE_URL}/surge-rules/`, {
+      headers,
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data.results || data || [];
+  } catch (err) {
+    console.warn('Could not fetch surge rules', err);
+    return [];
+  }
+}
+
 
 

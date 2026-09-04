@@ -53,6 +53,13 @@ export default function Hero({ selectedCity, onCityChange, onSearch }: HeroProps
                   type="text" 
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      onSearch(searchTerm);
+                      const el = document.getElementById('marketplace-listings');
+                      if (el) el.scrollIntoView({ behavior: 'smooth' });
+                    }
+                  }}
                   placeholder="e.g. Sony FX3, MacBook M3, DJI Mavic 3"
                   className="w-full bg-transparent text-sm font-semibold text-gray-900 outline-none placeholder-gray-400"
                 />
@@ -83,7 +90,12 @@ export default function Hero({ selectedCity, onCityChange, onSearch }: HeroProps
             {/* Search CTA */}
             <div className="flex items-stretch">
               <button 
-                onClick={() => onSearch(searchTerm)}
+                type="button"
+                onClick={() => {
+                  onSearch(searchTerm);
+                  const el = document.getElementById('marketplace-listings');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm rounded-2xl py-3.5 px-6 shadow-md shadow-indigo-300 hover:shadow-lg transition-all flex items-center justify-center gap-2 group cursor-pointer"
               >
                 <span>Find Gear</span>
@@ -95,15 +107,17 @@ export default function Hero({ selectedCity, onCityChange, onSearch }: HeroProps
 
           {/* Quick Filter Tags */}
           <div className="flex flex-wrap items-center gap-2 pt-3 px-2 text-xs text-gray-700">
-            <span className="font-semibold text-gray-700">Trending Now:</span>
-            {['Sony FX3 Cinema', 'MacBook Pro M3 Max', 'DJI Mavic 3 Cine', 'Canon EOS R5', 'Aputure 600d Light'].map((tag) => (
+            {['Sony FX3', 'MacBook Pro', 'DJI Mavic 3', 'Canon EOS R5', 'Shure SM7B', 'PlayStation 5'].map((tag) => (
               <button
                 key={tag}
+                type="button"
                 onClick={() => {
                   setSearchTerm(tag);
                   onSearch(tag);
+                  const el = document.getElementById('marketplace-listings');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
                 }}
-                className="bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-600 px-2.5 py-1 rounded-full transition-colors cursor-pointer"
+                className="bg-gray-100 hover:bg-indigo-50 hover:text-indigo-600 text-gray-700 font-medium px-2.5 py-1 rounded-full transition-colors cursor-pointer"
               >
                 {tag}
               </button>

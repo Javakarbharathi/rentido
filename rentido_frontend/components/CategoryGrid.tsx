@@ -39,7 +39,12 @@ export default function CategoryGrid({ selectedCategory, onSelectCategory }: Cat
             return (
               <button
                 key={cat.id}
-                onClick={() => onSelectCategory(cat.id)}
+                type="button"
+                onClick={() => {
+                  onSelectCategory(cat.id);
+                  const el = document.getElementById('marketplace-listings');
+                  if (el) el.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className={`flex flex-col items-center justify-center p-3.5 rounded-2xl border transition-all cursor-pointer group text-center ${
                   isSelected
                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-200'

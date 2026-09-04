@@ -7,7 +7,7 @@ import { loginUser } from '@/lib/api';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: (userData: any, token: string) => void;
+  onSuccess: (userData: any, token: string, refreshToken?: string) => void;
 }
 
 export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps) {
@@ -42,7 +42,13 @@ export default function AuthModal({ isOpen, onClose, onSuccess }: AuthModalProps
     try {
       const data = await loginUser(email.trim(), password);
       if (data.access && data.user) {
-        onSuccess(data.user, data.access);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('rentido_token', data.access);
+          if (data.refresh) {
+            localStorage.setItem('rentido_refresh_token', data.refresh);
+          }
+        }
+        onSuccess(data.user, data.access, data.refresh);
         onClose();
       } else {
         setError(data.detail || 'Invalid email or password. Please verify credentials.');
