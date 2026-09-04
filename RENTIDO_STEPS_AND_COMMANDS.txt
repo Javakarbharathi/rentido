@@ -79,7 +79,9 @@ rentido_backend/
 │   ├── categories/
 │   ├── assets/
 │   ├── listings/
-│   └── rentals/
+│   ├── rentals/
+│   ├── payments/
+│   └── inspections/
 └── common/
 --------------------------------------------------------------------------------
 
@@ -109,42 +111,29 @@ Expected Result:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 6: GENERATE INITIAL DATABASE MIGRATIONS
-================================================================================
-Purpose: Create Django migration files for the core domain apps (Users with
-unified roles, Categories with commission rules, Physical Assets, Listings, and
-Rentals with immutable pricing snapshots).
-Working Directory: C:\Users\javak\project-nithish\rentido_backend
-
-Commands:
-cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals
-
-Expected Result:
-Migration files generated under each app's migrations directory (e.g. 0001_initial.py).
---------------------------------------------------------------------------------
-
-================================================================================
-STEP 7: APPLY MIGRATIONS TO MYSQL DATABASE
+STEP 6: GENERATE & APPLY DATABASE MIGRATIONS
 ================================================================================
 Purpose: Execute all migrations directly against the MySQL 'rentido' database.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py makemigrations users categories assets listings rentals payments inspections
 ..\.venv\Scripts\python manage.py migrate
 
 Expected Result:
-All migrations applied (OK) to MySQL:
-- users_user, users_userrole, users_renterprofile, users_ownerprofile
-- categories_category, categories_commissionrule
-- assets_asset, assets_assetmedia
-- listings_listing
-- rentals_rental, rentals_rentalpricingsnapshot, rentals_rentalextension
+All migrations applied (OK) across:
+- users (User, UserRole, RenterProfile, OwnerProfile)
+- categories (Category, CommissionRule)
+- assets (Asset, AssetMedia)
+- listings (Listing)
+- rentals (Rental, RentalPricingSnapshot, RentalExtension)
+- payments (Payment, SecurityDeposit, LedgerEntry)
+- inspections (Inspection, InspectionMedia, DamageReport)
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 8: CREATE ADMIN SUPERUSER IN MYSQL
+STEP 7: CREATE ADMIN SUPERUSER IN MYSQL
 ================================================================================
 Purpose: Create the primary superuser account for logging into the Django Admin.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
@@ -160,15 +149,15 @@ Role: SUPER_ADMIN
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 9: IMPLEMENT AUTHENTICATION & MULTI-ROLE USER APIS (JWT)
+STEP 8: AUTHENTICATION & MULTI-ROLE USER APIS (JWT)
 ================================================================================
-Purpose: Build and expose REST API endpoints for user registration, JWT login,
-token refresh, user profile retrieval, and dynamic role activation.
+Purpose: REST API endpoints for user registration, JWT login, token refresh,
+profile retrieval, and dynamic role switching.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Endpoints:
 - POST /api/auth/register/     -> Register new user (auto-provisions Renter/Owner profile)
-- POST /api/auth/login/        -> JWT Login (returns access, refresh, roles & user payload)
+- POST /api/auth/login/        -> JWT Login (returns tokens, roles & user payload)
 - POST /api/auth/token/refresh/-> Refresh access token
 - GET  /api/auth/me/           -> Get current authenticated user profile
 - POST /api/auth/me/roles/add/ -> Add an extra role (e.g. Renter becomes Owner)
@@ -176,7 +165,7 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 10: CATEGORIES & COMMISSION RULES ENGINE
+STEP 9: CATEGORIES & COMMISSION RULES ENGINE
 ================================================================================
 Purpose: Manage hierarchical product categories and admin-controlled dynamic
 commission percentages per category.
@@ -190,14 +179,14 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 11: PHYSICAL ASSET MANAGEMENT & VERIFICATION LIFECYCLE
+STEP 10: PHYSICAL ASSET MANAGEMENT & VERIFICATION LIFECYCLE
 ================================================================================
-Purpose: Enable Owners to register physical inventory (brand, model, serial number,
-condition, replacement value), upload photos, and undergo Admin verification.
+Purpose: Enable Owners to register physical inventory, upload photos, and undergo
+Admin verification before listing.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Endpoints:
-- GET  /api/assets/                   -> List physical assets owned by user (or all if admin)
+- GET  /api/assets/                   -> List physical assets owned by user
 - POST /api/assets/                   -> Register physical asset (auto-activates Owner role)
 - GET  /api/assets/{id}/              -> Retrieve asset details
 - POST /api/assets/{id}/upload-media/ -> Upload photos/documents for the asset
@@ -205,21 +194,21 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 12: MARKETPLACE RENTAL LISTINGS & SEARCH DISCOVERY ENGINE
+STEP 11: MARKETPLACE RENTAL LISTINGS & SEARCH DISCOVERY ENGINE
 ================================================================================
 Purpose: Create commercial rental listings linked to verified assets with hourly,
 daily, weekly, monthly rates, security deposits, and discovery search filters.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Endpoints:
-- GET  /api/listings/                 -> Public search/filter listings (city, category, min_price, max_price, search)
+- GET  /api/listings/                 -> Public search/filter listings (city, category, min/max price, search)
 - GET  /api/listings/{id}/            -> Public detailed view of listing with asset specs
 - POST /api/listings/                 -> Create new rental listing (Owner only)
 - GET  /api/listings/my-listings/     -> Retrieve all listings owned by current user
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 13: AVAILABILITY ENGINE & PRICING ENGINE
+STEP 12: AVAILABILITY ENGINE & PRICING ENGINE
 ================================================================================
 Purpose: Prevent double bookings across calendar timeframes and compute complete
 pricing breakdowns with dynamic category commissions, delivery fees, and held deposits.
@@ -231,7 +220,7 @@ Services:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 14: RENTAL BOOKING & LIFECYCLE STATE MACHINE APIS
+STEP 13: RENTAL BOOKING & LIFECYCLE STATE MACHINE APIS
 ================================================================================
 Purpose: Complete rental transaction engine with OTP handover/return, immutable
 pricing snapshots, and multi-stage lifecycle transitions.
@@ -249,32 +238,64 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 15: EXECUTE AUTOMATED TEST SUITE (12/12 PASS)
+STEP 14: FINANCIAL LEDGER & SECURITY DEPOSIT ESCROW ENGINE
+================================================================================
+Purpose: Strict double-entry accounting separating customer payments into held
+security deposits (escrow), platform revenue (commission, platform fee, delivery fee),
+and owner payable liability.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- POST /api/payments/pay/             -> Process rental payment (updates status & records ledger)
+- GET  /api/payments/                 -> List payments made or received
+- GET  /api/deposits/                 -> Track held security deposits
+- POST /api/deposits/{id}/settle/     -> Settle deposit release or damage deduction (Admin only)
+- GET  /api/ledger/                   -> Immutable transaction audit trail
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 15: HANDOVER / RETURN INSPECTIONS & DAMAGE REPORTING
+================================================================================
+Purpose: Pre-rental, handover, return, and repair inspections with dynamic
+checklists, photos, and formal damage report dispute handling.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/inspections/                     -> List inspections for rentals
+- POST /api/inspections/                     -> Record condition check with checklist
+- POST /api/inspections/{id}/upload-photo/   -> Upload photographic condition evidence
+- GET  /api/damage-reports/                  -> List filed damage reports
+- POST /api/damage-reports/                  -> File a damage report with repair estimate
+- POST /api/damage-reports/{id}/resolve/     -> Admin resolves report and triggers deposit deduction
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 16: EXECUTE AUTOMATED TEST SUITE (16/16 PASS)
 ================================================================================
 Purpose: Run test coverage across all domain apps on MySQL.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
 cd C:\Users\javak\project-nithish\rentido_backend
-..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections
 
 Expected Result:
-Ran 12 tests in ~12s ... OK
+Ran 16 tests in ~19s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 16: COMMIT AND SYNC STEP 4 TO GITHUB
+STEP 17: COMMIT AND SYNC PHASE 2 TO GITHUB
 ================================================================================
-Purpose: Stage and commit Availability Engine, Pricing Engine, and Rental
-State Machine to the remote GitHub repository.
+Purpose: Stage and commit Payments, Ledger, Deposits, Inspections, and Damage
+reporting engines to the remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement availability engine, pricing engine, and rental lifecycle state machine"
+git commit -m "feat: implement financial ledger, security deposit escrow, and inspection damage system"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Step 4 deliverables.
+GitHub repository synchronized with Phase 2 deliverables.
 --------------------------------------------------------------------------------
