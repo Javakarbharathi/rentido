@@ -4,6 +4,10 @@ djangorestframework>=3.15.2
 djangorestframework-simplejwt>=5.3.1
 django-cors-headers>=4.4.0
 
+# Database (MySQL)
+pymysql>=1.1.1
+cryptography>=43.0.0
+
 # Configuration & Utilities
 python-dotenv>=1.0.1
 Pillow>=10.4.0

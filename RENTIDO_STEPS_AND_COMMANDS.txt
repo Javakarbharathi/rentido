@@ -4,6 +4,7 @@
 Project: Rentido - Trusted Local Rental Marketplace + Logistics + Asset Services
 Repository: https://github.com/Javakarbharathi/rentido.git
 Root Directory: C:\Users\javak\project-nithish
+Database: MySQL Server 8.0 (Port 3307, Database: rentido)
 ================================================================================
 
 ================================================================================
@@ -41,8 +42,8 @@ A '.venv' directory is created with an isolated Python interpreter and pip.
 ================================================================================
 STEP 3: INSTALL PROJECT DEPENDENCIES
 ================================================================================
-Purpose: Install Django, Django REST Framework, CORS headers, environment
-configuration, and documentation tools into the virtual environment.
+Purpose: Install Django, Django REST Framework, MySQL drivers (PyMySQL, Cryptography),
+CORS headers, environment configuration, and Swagger documentation tools.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
@@ -83,7 +84,32 @@ rentido_backend/
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 5: GENERATE INITIAL DATABASE MIGRATIONS
+STEP 5: MYSQL DATABASE CONFIGURATION & INITIALIZATION
+================================================================================
+Purpose: Set up the MySQL connection on port 3307, configure credentials in .env,
+and create the 'rentido' database schema with utf8mb4 encoding.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+# 1. Environment variables (.env file in project-nithish/):
+DJANGO_SECRET_KEY=your-secret-key
+DJANGO_DEBUG=True
+DB_ENGINE=django.db.backends.mysql
+DB_NAME=rentido
+DB_USER=root
+DB_PASSWORD=root123
+DB_HOST=127.0.0.1
+DB_PORT=3307
+
+# 2. Create the database in MySQL:
+.\.venv\Scripts\python -c "import pymysql; conn = pymysql.connect(host='127.0.0.1', port=3307, user='root', password='root123'); cur = conn.cursor(); cur.execute('CREATE DATABASE IF NOT EXISTS rentido CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;'); conn.commit(); print('Database rentido is ready!'); conn.close()"
+
+Expected Result:
+"Database rentido is ready!" printed.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 6: GENERATE INITIAL DATABASE MIGRATIONS
 ================================================================================
 Purpose: Create Django migration files for the core domain apps (Users with
 unified roles, Categories with commission rules, Physical Assets, Listings, and
@@ -99,9 +125,9 @@ Migration files generated under each app's migrations directory (e.g. 0001_initi
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 6: APPLY MIGRATIONS TO DATABASE
+STEP 7: APPLY MIGRATIONS TO MYSQL DATABASE
 ================================================================================
-Purpose: Execute all migrations against the database schema.
+Purpose: Execute all migrations directly against the MySQL 'rentido' database.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
@@ -109,13 +135,18 @@ cd C:\Users\javak\project-nithish\rentido_backend
 ..\.venv\Scripts\python manage.py migrate
 
 Expected Result:
-Database tables created for auth, users, categories, assets, listings, and rentals.
+All migrations applied (OK) to MySQL:
+- users_user, users_userrole, users_renterprofile, users_ownerprofile
+- categories_category, categories_commissionrule
+- assets_asset, assets_assetmedia
+- listings_listing
+- rentals_rental, rentals_rentalpricingsnapshot, rentals_rentalextension
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 7: SYSTEM INTEGRITY CHECK & SERVER VERIFICATION
+STEP 8: SYSTEM INTEGRITY CHECK & SERVER VERIFICATION
 ================================================================================
-Purpose: Ensure all Django app models, URLs, and settings pass validation.
+Purpose: Ensure all Django app models, URLs, and MySQL connection pass validation.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
@@ -130,18 +161,18 @@ Interactive Swagger UI available at http://127.0.0.1:8000/api/docs/
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 8: COMMIT AND SYNC CODEBASE TO GITHUB
+STEP 9: COMMIT AND SYNC CODEBASE TO GITHUB
 ================================================================================
-Purpose: Stage all project files (excluding virtual environment, database, and
-logs via .gitignore), commit the initial foundation, and push to GitHub origin.
+Purpose: Stage updated dependencies, .env.example, and MySQL configurations
+(ignoring sensitive .env file), commit, and push to GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: initial rentido modular monolith setup with core apps"
-git push -u origin main
+git commit -m "feat: configure MySQL 8.0 connection and apply migrations to rentido db"
+git push origin main
 
 Expected Result:
-All project code and documentation synchronized to https://github.com/Javakarbharathi/rentido.git
+GitHub repository updated with MySQL configuration and setup guide.
 --------------------------------------------------------------------------------

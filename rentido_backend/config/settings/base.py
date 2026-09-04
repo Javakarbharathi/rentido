@@ -4,9 +4,14 @@ Base settings for Rentido project.
 from pathlib import Path
 import os
 import sys
+from dotenv import load_dotenv
 
 # Build paths: BASE_DIR points to rentido_backend/
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+# Load environment variables from .env file
+load_dotenv(BASE_DIR.parent / '.env')
+load_dotenv(BASE_DIR / '.env')
 
 # Add apps directory to Python path
 sys.path.insert(0, str(BASE_DIR / 'apps'))
