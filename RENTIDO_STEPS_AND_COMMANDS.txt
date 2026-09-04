@@ -346,3 +346,78 @@ git push origin main
 Expected Result:
 GitHub repository synchronized with Phase 5 deliverables.
 --------------------------------------------------------------------------------
+
+================================================================================
+STEP 21: RENTIDO REVIEWS & RATINGS ENGINE (PHASE 6)
+================================================================================
+Purpose: Provide multi-party rating and review system (Renter reviewing Owner,
+Owner reviewing Renter, Renter reviewing Physical Asset, Renter reviewing Driver)
+strictly guarded by rental completion constraints with duplicate prevention.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/reviews/                               -> Browse reviews (filter by asset_id, user_id, target_type)
+- POST /api/reviews/                               -> Submit review (guarded by rental status == COMPLETED)
+- GET  /api/reviews/{id}/                           -> Retrieve review detail
+
+Key Features:
+- Multi-target reviews: OWNER, RENTER, ASSET, DRIVER
+- Enforces 1 review per transaction per target type
+- Automatically feeds into the Rentido Trust Score Engine
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 22: RENTIDO TRUST SCORE ENGINE (PHASE 6)
+================================================================================
+Purpose: Real-time dynamic trust scoring (0 to 1000 points) and 4-tier status
+(Bronze, Silver, Gold, Platinum) tracking positive (KYC, on-time returns, positive
+reviews) and negative (disputes, late returns, damage, negative reviews) events.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- GET  /api/trust/me/                              -> Authenticated user's trust profile and recent event history
+- GET  /api/trust/user/{user_id}/                  -> Public trust badge & tier lookup for any user
+- GET  /api/trust/                                 -> Admin overview of all trust profiles
+
+Scoring Rules & Tiers:
+- Default Score: 150 points (Silver Tier)
+- KYC Verified: +50 pts
+- Completed Rental: +15 pts
+- Positive Review (4-5★): +15 pts
+- Negative Review (1-2★): -20 pts
+- Dispute Filed: -25 pts
+- Asset Damaged: -30 pts
+- Tiers: Bronze (<150), Silver (150-399), Gold (400-649), Platinum (650+)
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 23: EXECUTE COMPREHENSIVE REGRESSION TEST SUITE (30/30 PASS)
+================================================================================
+Purpose: Run full test coverage across all 11 domain apps on local MySQL 8.0.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics apps.services apps.reviews apps.trust
+
+Expected Result:
+Ran 30 tests in ~38s ... OK
+All 11 apps passing with 100% integrity.
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 24: COMMIT AND SYNC PHASE 6 (OPTION 1) TO GITHUB
+================================================================================
+Purpose: Stage and commit Reviews, Ratings, and Trust Score Engine to GitHub.
+Working Directory: C:\Users\javak\project-nithish
+
+Commands:
+cd C:\Users\javak\project-nithish
+git add .
+git commit -m "feat: implement reviews, ratings, and Rentido trust score engine"
+git push origin main
+
+Expected Result:
+GitHub repository synchronized with Phase 6 deliverables.
+--------------------------------------------------------------------------------
+
