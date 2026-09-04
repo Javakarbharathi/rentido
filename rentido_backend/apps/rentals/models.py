@@ -86,6 +86,14 @@ class RentalPricingSnapshot(models.Model):
         return f"Snapshot for Rental #{self.rental_id}: Paid ₹{self.total_amount_paid}"
 
 
+class ExtensionStatus(models.TextChoices):
+    PENDING_APPROVAL = 'PENDING_APPROVAL', _('Pending Owner Approval')
+    APPROVED = 'APPROVED', _('Approved by Owner (Awaiting Payment)')
+    PAID = 'PAID', _('Paid & Confirmed')
+    REJECTED = 'REJECTED', _('Rejected by Owner')
+    CANCELLED = 'CANCELLED', _('Cancelled')
+
+
 class RentalExtension(models.Model):
     """
     Tracks requested rental extensions without directly overwriting original timestamps.
@@ -95,9 +103,58 @@ class RentalExtension(models.Model):
     new_end_datetime = models.DateTimeField()
     additional_rental_amount = models.DecimalField(max_digits=10, decimal_places=2)
     additional_commission_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    additional_platform_fee = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    total_extension_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
+    status = models.CharField(max_length=30, choices=ExtensionStatus.choices, default=ExtensionStatus.PENDING_APPROVAL)
+    reason = models.CharField(max_length=255, blank=True)
+    rejection_reason = models.CharField(max_length=255, blank=True)
     is_approved_by_owner = models.BooleanField(default=False)
     is_paid = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = _('Rental Extension')
+        verbose_name_plural = _('Rental Extensions')
+        ordering = ['-created_at']
 
     def __str__(self):
-        return f"Extension for Rental #{self.rental_id} until {self.new_end_datetime}"
+        return f"Extension for Rental #{self.rental_id} to {self.new_end_datetime} ({self.get_status_display()})"
+
+
+class RentalAgreement(models.Model):
+    """
+    Legally binding rental agreement generated upon booking confirmation.
+    """
+    rental = models.OneToOneField(Rental, on_delete=models.CASCADE, related_name='agreement')
+    agreement_number = models.CharField(max_length=100, unique=True)
+    terms_and_conditions = models.TextField()
+    signed_at = models.DateTimeField(auto_now_add=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        verbose_name = _('Rental Agreement')
+        verbose_name_plural = _('Rental Agreements')
+
+    def __str__(self):
+        return f"Agreement {self.agreement_number} (Rental #{self.rental_id})"
+
+
+class AgreementAddendum(models.Model):
+    """
+    Addendum to the original Rental Agreement generated upon a confirmed extension.
+    """
+    rental_agreement = models.ForeignKey(RentalAgreement, on_delete=models.CASCADE, related_name='addendums')
+    rental_extension = models.OneToOneField(RentalExtension, on_delete=models.CASCADE, related_name='addendum')
+    addendum_number = models.CharField(max_length=100, unique=True)
+    extended_until = models.DateTimeField()
+    additional_amount_paid = models.DecimalField(max_digits=10, decimal_places=2)
+    terms_addendum = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = _('Agreement Addendum')
+        verbose_name_plural = _('Agreement Addendums')
+
+    def __str__(self):
+        return f"Addendum {self.addendum_number} for Agreement {self.rental_agreement.agreement_number}"

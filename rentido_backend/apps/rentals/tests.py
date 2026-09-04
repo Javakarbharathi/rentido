@@ -161,3 +161,42 @@ class RentalLifecycleTests(TestCase):
         res_return = self.client.post(return_url, {'otp': rental.return_otp})
         self.assertEqual(res_return.status_code, status.HTTP_200_OK)
         self.assertEqual(res_return.data['status'], RentalStatus.COMPLETED)
+
+    def test_rental_extension_lifecycle_and_addendum(self):
+        # 1. Create Active Rental
+        rental = Rental.objects.create(
+            renter=self.renter, owner=self.owner, listing=self.listing,
+            start_datetime=self.start, end_datetime=self.end,
+            fulfillment_type=FulfillmentType.SELF_PICKUP,
+            status=RentalStatus.ACTIVE
+        )
+
+        # 2. Renter requests 1-day extension
+        self.client.force_authenticate(user=self.renter)
+        ext_req_url = reverse('rentals:rental-request-extension', kwargs={'pk': rental.id})
+        new_end = self.end + timedelta(days=1)
+        res_req = self.client.post(ext_req_url, {'new_end_datetime': new_end.isoformat(), 'reason': 'Shoot rescheduled'})
+        self.assertEqual(res_req.status_code, status.HTTP_201_CREATED)
+        ext_id = res_req.data['id']
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, RentalStatus.EXTENSION_PENDING)
+
+        # 3. Owner approves extension
+        self.client.force_authenticate(user=self.owner)
+        decide_url = reverse('rentals:extension-decide', kwargs={'pk': ext_id})
+        res_decide = self.client.post(decide_url, {'approve': True})
+        self.assertEqual(res_decide.status_code, status.HTTP_200_OK)
+
+        # 4. Renter pays for extension
+        self.client.force_authenticate(user=self.renter)
+        pay_url = reverse('rentals:extension-pay-extension', kwargs={'pk': ext_id})
+        res_pay = self.client.post(pay_url, {'payment_method': 'UPI'})
+        self.assertEqual(res_pay.status_code, status.HTTP_200_OK)
+        self.assertTrue(res_pay.data['is_paid'])
+
+        rental.refresh_from_db()
+        self.assertEqual(rental.status, RentalStatus.ACTIVE)
+        self.assertEqual(rental.end_datetime, new_end)
+        self.assertTrue(hasattr(rental, 'agreement'))
+        self.assertEqual(rental.agreement.addendums.count(), 1)
+

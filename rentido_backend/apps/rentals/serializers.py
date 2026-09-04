@@ -1,6 +1,15 @@
 import random
 from rest_framework import serializers
-from .models import Rental, RentalPricingSnapshot, RentalExtension, RentalStatus, FulfillmentType
+from .models import (
+    Rental,
+    RentalPricingSnapshot,
+    RentalExtension,
+    RentalAgreement,
+    AgreementAddendum,
+    RentalStatus,
+    FulfillmentType,
+    ExtensionStatus,
+)
 from .services.availability import AvailabilityService
 from .services.pricing import PricingEngine
 from apps.listings.models import Listing
@@ -116,9 +125,49 @@ class RentalBookingSerializer(serializers.Serializer):
         return rental
 
 
+class AgreementAddendumSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AgreementAddendum
+        fields = [
+            'id', 'addendum_number', 'extended_until', 'additional_amount_paid',
+            'terms_addendum', 'created_at'
+        ]
+        read_only_fields = fields
+
+
+class RentalAgreementSerializer(serializers.ModelSerializer):
+    addendums = AgreementAddendumSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = RentalAgreement
+        fields = [
+            'id', 'agreement_number', 'terms_and_conditions',
+            'signed_at', 'is_active', 'addendums'
+        ]
+        read_only_fields = fields
+
+
+class RentalExtensionSerializer(serializers.ModelSerializer):
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
+    addendum = AgreementAddendumSerializer(read_only=True)
+
+    class Meta:
+        model = RentalExtension
+        fields = [
+            'id', 'rental', 'previous_end_datetime', 'new_end_datetime',
+            'additional_rental_amount', 'additional_commission_amount',
+            'additional_platform_fee', 'total_extension_amount',
+            'status', 'status_display', 'is_approved_by_owner', 'is_paid',
+            'reason', 'rejection_reason', 'addendum', 'created_at', 'updated_at'
+        ]
+        read_only_fields = fields
+
+
 class RentalSerializer(serializers.ModelSerializer):
     listing = ListingSerializer(read_only=True)
     pricing_snapshot = RentalPricingSnapshotSerializer(read_only=True)
+    agreement = RentalAgreementSerializer(read_only=True)
+    extensions = RentalExtensionSerializer(many=True, read_only=True)
     renter_email = serializers.ReadOnlyField(source='renter.email')
     owner_email = serializers.ReadOnlyField(source='owner.email')
     status_display = serializers.CharField(source='get_status_display', read_only=True)
@@ -130,11 +179,25 @@ class RentalSerializer(serializers.ModelSerializer):
             'id', 'renter', 'renter_email', 'owner', 'owner_email',
             'listing', 'start_datetime', 'end_datetime', 'fulfillment_type',
             'fulfillment_type_display', 'status', 'status_display',
-            'handover_otp', 'return_otp', 'pricing_snapshot',
-            'created_at', 'updated_at'
+            'handover_otp', 'return_otp', 'pricing_snapshot', 'agreement',
+            'extensions', 'created_at', 'updated_at'
         ]
         read_only_fields = fields
 
 
 class VerifyOTPActionSerializer(serializers.Serializer):
     otp = serializers.CharField(max_length=6, min_length=6)
+
+
+class RequestExtensionSerializer(serializers.Serializer):
+    new_end_datetime = serializers.DateTimeField()
+    reason = serializers.CharField(required=False, allow_blank=True)
+
+
+class OwnerDecideExtensionSerializer(serializers.Serializer):
+    approve = serializers.BooleanField(required=True)
+    rejection_reason = serializers.CharField(required=False, allow_blank=True)
+
+
+class PayExtensionSerializer(serializers.Serializer):
+    payment_method = serializers.CharField(default='UPI')

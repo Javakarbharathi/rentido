@@ -1,5 +1,11 @@
 from django.contrib import admin
-from .models import Rental, RentalPricingSnapshot, RentalExtension
+from .models import (
+    Rental,
+    RentalPricingSnapshot,
+    RentalExtension,
+    RentalAgreement,
+    AgreementAddendum,
+)
 
 
 class RentalPricingSnapshotInline(admin.StackedInline):
@@ -10,6 +16,12 @@ class RentalPricingSnapshotInline(admin.StackedInline):
 
 class RentalExtensionInline(admin.TabularInline):
     model = RentalExtension
+    extra = 0
+
+
+class AgreementAddendumInline(admin.StackedInline):
+    model = AgreementAddendum
+    can_delete = False
     extra = 0
 
 
@@ -28,4 +40,18 @@ class RentalPricingSnapshotAdmin(admin.ModelAdmin):
 
 @admin.register(RentalExtension)
 class RentalExtensionAdmin(admin.ModelAdmin):
-    list_display = ['rental', 'previous_end_datetime', 'new_end_datetime', 'is_approved_by_owner', 'is_paid']
+    list_display = ['id', 'rental', 'previous_end_datetime', 'new_end_datetime', 'status', 'is_approved_by_owner', 'is_paid', 'total_extension_amount']
+    list_filter = ['status', 'is_approved_by_owner', 'is_paid']
+    inlines = [AgreementAddendumInline]
+
+
+@admin.register(RentalAgreement)
+class RentalAgreementAdmin(admin.ModelAdmin):
+    list_display = ['agreement_number', 'rental', 'signed_at', 'is_active']
+    search_fields = ['agreement_number', 'rental__id']
+    inlines = [AgreementAddendumInline]
+
+
+@admin.register(AgreementAddendum)
+class AgreementAddendumAdmin(admin.ModelAdmin):
+    list_display = ['addendum_number', 'rental_agreement', 'extended_until', 'additional_amount_paid', 'created_at']

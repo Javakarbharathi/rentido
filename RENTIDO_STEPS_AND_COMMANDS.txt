@@ -123,15 +123,7 @@ cd C:\Users\javak\project-nithish\rentido_backend
 ..\.venv\Scripts\python manage.py migrate
 
 Expected Result:
-All migrations applied (OK) across:
-- users (User, UserRole, RenterProfile, OwnerProfile)
-- categories (Category, CommissionRule)
-- assets (Asset, AssetMedia)
-- listings (Listing)
-- rentals (Rental, RentalPricingSnapshot, RentalExtension)
-- payments (Payment, SecurityDeposit, LedgerEntry)
-- inspections (Inspection, InspectionMedia, DamageReport)
-- logistics (Vehicle, DeliveryOrder, TransportProof, LogisticsCommissionRule)
+All migrations applied (OK) across all domain apps.
 --------------------------------------------------------------------------------
 
 ================================================================================
@@ -290,9 +282,23 @@ Endpoints:
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 17: EXECUTE AUTOMATED TEST SUITE (18/18 PASS)
+STEP 17: RENTAL EXTENSIONS & LEGAL AGREEMENT ADDENDUMS
 ================================================================================
-Purpose: Run full automated test coverage across all 8 domain apps on MySQL.
+Purpose: Dynamic rental extensions with real-time asset availability validation,
+owner approval, ledger split, and automated legal agreement addendums.
+Working Directory: C:\Users\javak\project-nithish\rentido_backend
+
+Endpoints:
+- POST /api/rentals/{id}/request-extension/ -> Renter requests extension (status: EXTENSION_PENDING)
+- GET  /api/extensions/                     -> List requested extensions
+- POST /api/extensions/{id}/decide/         -> Owner approves or rejects extension
+- POST /api/extensions/{id}/pay/            -> Renter pays for extension, updates end_datetime, and generates AgreementAddendum
+--------------------------------------------------------------------------------
+
+================================================================================
+STEP 18: EXECUTE COMPREHENSIVE AUTOMATED TEST SUITE (19/19 PASS)
+================================================================================
+Purpose: Run full automated test coverage across all domain apps on MySQL.
 Working Directory: C:\Users\javak\project-nithish\rentido_backend
 
 Commands:
@@ -300,22 +306,22 @@ cd C:\Users\javak\project-nithish\rentido_backend
 ..\.venv\Scripts\python manage.py test apps.users apps.categories apps.assets apps.listings apps.rentals apps.payments apps.inspections apps.logistics
 
 Expected Result:
-Ran 18 tests in ~25s ... OK
+Ran 19 tests in ~28s ... OK
 --------------------------------------------------------------------------------
 
 ================================================================================
-STEP 18: COMMIT AND SYNC PHASE 3 TO GITHUB
+STEP 19: COMMIT AND SYNC PHASE 4 TO GITHUB
 ================================================================================
-Purpose: Stage and commit Logistics, Vehicle, Driver dispatch, and Transport
-proof tracking engines to the remote GitHub repository.
+Purpose: Stage and commit Rental Extensions, Agreements, and Addendums to the
+remote GitHub repository.
 Working Directory: C:\Users\javak\project-nithish
 
 Commands:
 cd C:\Users\javak\project-nithish
 git add .
-git commit -m "feat: implement Rentido logistics, vehicle fleet, driver dispatch, and transport condition tracking"
+git commit -m "feat: implement rental extension engine, owner approvals, and agreement addendums"
 git push origin main
 
 Expected Result:
-GitHub repository synchronized with Phase 3 deliverables.
+GitHub repository synchronized with Phase 4 deliverables.
 --------------------------------------------------------------------------------
