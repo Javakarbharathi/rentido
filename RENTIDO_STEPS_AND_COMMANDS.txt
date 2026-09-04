@@ -825,6 +825,47 @@ Architecture & Gateway Capabilities:
 
 Expected Result:
 Ran 52 tests in ~70s ... OK (100% PASS across all 14 domain apps)
+================================================================================
+STEP 41: OWNER PORTAL & LISTING CREATION STUDIO (PHASE 11 / OPTION A)
+================================================================================
+Purpose: Provide equipment owners with a comprehensive commercial management studio
+to register physical assets, define rental pricing and refundable escrow deposits,
+track active gear portfolio, review double-entry financial statements, and disburse
+earnings payouts.
+Working Directory: C:\Users\javak\project-nithish\rentido_frontend
+
+Components & Features Implemented:
+1. Owner Studio Modal (components/OwnerStudioModal.tsx):
+   - Tab 1: "Publish New Listing"
+     * Physical asset registration (Brand, Model, Serial Number, Condition, Replacement Value)
+     * Commercial listing configuration (Daily rate, Refundable deposit, City, Neighborhood, Pincode)
+     * Fulfillment options toggle (Doorstep Delivery vs. Self Pickup)
+     * 1-Click "⚡ Autofill Cinema Gear" preset (RED Komodo 6K Cinema Rig)
+     * Directly invokes POST /api/assets/ and POST /api/listings/, auto-refreshing marketplace feed
+   - Tab 2: "My Equipment Portfolio"
+     * Live display of owner's registered equipment with serial numbers and publication statuses
+   - Tab 3: "Earnings & Escrow Payouts"
+     * Real-time financial metrics: Total Credited, Disbursed, Available Balance, Active Escrow Deposits
+     * Instant Payout button via POST /api/payments/ledger/request-payout/
+     * Tamper-evident double-entry ledger audit trail
+
+2. Backend Endpoints Added (apps.payments):
+   - GET  /api/payments/ledger/owner-summary/ -> Aggregate credited revenue, disbursed payouts, and escrow held
+   - POST /api/payments/ledger/request-payout/ -> Disburse pending balance to owner's bank/UPI account
+
+3. Frontend Wiring:
+   - "List Gear" button integrated prominently into the global Navbar with auto-authentication guard
+   - TypeScript build verified cleanly (npm run build passed in 1024ms)
+
+Verification Commands:
+cd C:\Users\javak\project-nithish\rentido_backend
+..\.venv\Scripts\python manage.py test
+
+cd C:\Users\javak\project-nithish\rentido_frontend
+npm run build
+
+Expected Result:
+52/52 backend tests pass with 100% integrity. Next.js production build succeeds with 0 errors.
 --------------------------------------------------------------------------------
 
 

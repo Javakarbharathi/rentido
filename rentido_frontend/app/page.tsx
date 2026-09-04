@@ -9,6 +9,7 @@ import BookingModal from '@/components/BookingModal';
 import TrustBadgeModal from '@/components/TrustBadgeModal';
 import AuthModal from '@/components/AuthModal';
 import DashboardModal from '@/components/DashboardModal';
+import OwnerStudioModal from '@/components/OwnerStudioModal';
 import { fetchListings, Listing } from '@/lib/api';
 import { Shield, Sparkles, Truck, Wrench, HeartHandshake } from 'lucide-react';
 
@@ -129,26 +130,28 @@ export default function Home() {
   const [isTrustModalOpen, setIsTrustModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isOwnerStudioOpen, setIsOwnerStudioOpen] = useState(false);
 
   // User state
   const [user, setUser] = useState<any>(null);
   const [token, setToken] = useState<string>('');
 
-  useEffect(() => {
-    async function loadData() {
-      const cityQuery = selectedCity === 'All Cities' ? undefined : selectedCity;
-      const apiListings = await fetchListings(cityQuery);
-      if (apiListings && apiListings.length > 0) {
-        setListings(apiListings);
+  const loadData = async () => {
+    const cityQuery = selectedCity === 'All Cities' ? undefined : selectedCity;
+    const apiListings = await fetchListings(cityQuery);
+    if (apiListings && apiListings.length > 0) {
+      setListings(apiListings);
+    } else {
+      // Filter fallback gear by city if selected
+      if (selectedCity !== 'All Cities') {
+        setListings(FALLBACK_GEAR.filter((g) => g.city.toLowerCase() === selectedCity.toLowerCase()));
       } else {
-        // Filter fallback gear by city if selected
-        if (selectedCity !== 'All Cities') {
-          setListings(FALLBACK_GEAR.filter((g) => g.city.toLowerCase() === selectedCity.toLowerCase()));
-        } else {
-          setListings(FALLBACK_GEAR);
-        }
+        setListings(FALLBACK_GEAR);
       }
     }
+  };
+
+  useEffect(() => {
     loadData();
   }, [selectedCity]);
 
@@ -181,6 +184,13 @@ export default function Home() {
         onLogout={handleLogout}
         onOpenDashboard={() => setIsDashboardOpen(true)}
         onOpenTrustModal={() => setIsTrustModalOpen(true)}
+        onOpenOwnerStudio={() => {
+          if (!user) {
+            setIsAuthModalOpen(true);
+          } else {
+            setIsOwnerStudioOpen(true);
+          }
+        }}
       />
 
       {/* Hero Section */}
@@ -318,6 +328,15 @@ export default function Home() {
         isOpen={isDashboardOpen}
         onClose={() => setIsDashboardOpen(false)}
         user={user}
+      />
+
+      <OwnerStudioModal
+        isOpen={isOwnerStudioOpen}
+        onClose={() => setIsOwnerStudioOpen(false)}
+        user={user}
+        token={token}
+        onOpenAuth={() => setIsAuthModalOpen(true)}
+        onListingCreated={loadData}
       />
 
     </div>

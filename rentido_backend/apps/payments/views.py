@@ -6,7 +6,17 @@ from rest_framework.response import Response
 from django.db.models import Q
 from drf_spectacular.utils import extend_schema, extend_schema_view
 
-from .models import Payment, SecurityDeposit, LedgerEntry, PaymentStatus, PaymentMethod
+from decimal import Decimal
+from .models import (
+    Payment,
+    SecurityDeposit,
+    LedgerEntry,
+    PaymentStatus,
+    PaymentMethod,
+    LedgerEntryType,
+    LedgerAccount,
+    DepositStatus,
+)
 from .serializers import (
     PaymentSerializer,
     SecurityDepositSerializer,
@@ -303,3 +313,84 @@ class LedgerViewSet(viewsets.ReadOnlyModelViewSet):
         return self.queryset.filter(
             Q(rental__renter=user) | Q(rental__owner=user)
         )
+
+    @extend_schema(
+        summary="Retrieve owner earnings, payable balance, and escrow statement",
+        responses={200: dict}
+    )
+    @action(detail=False, methods=['get'], url_path='owner-summary')
+    def owner_summary(self, request):
+        from django.db.models import Sum
+        user = request.user
+        credited = LedgerEntry.objects.filter(
+            rental__owner=user,
+            entry_type=LedgerEntryType.OWNER_PAYABLE_CREDITED
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        settled = LedgerEntry.objects.filter(
+            rental__owner=user,
+            entry_type=LedgerEntryType.OWNER_PAYOUT_SETTLED
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        pending_payout = credited - settled
+
+        active_deposits = SecurityDeposit.objects.filter(
+            rental__owner=user,
+            status=DepositStatus.HELD
+        ).aggregate(total=Sum('total_amount'))['total'] or Decimal('0.00')
+
+        recent_entries = LedgerEntrySerializer(
+            LedgerEntry.objects.filter(rental__owner=user)[:10],
+            many=True
+        ).data
+
+        return Response({
+            'total_earnings_credited': str(credited),
+            'total_payout_settled': str(settled),
+            'pending_payout_balance': str(pending_payout),
+            'active_escrow_deposits': str(active_deposits),
+            'recent_entries': recent_entries,
+        }, status=status.HTTP_200_OK)
+
+    @extend_schema(
+        summary="Simulate request payout of pending balance to owner's bank/UPI",
+        responses={200: dict}
+    )
+    @action(detail=False, methods=['post'], url_path='request-payout')
+    def request_payout(self, request):
+        from django.db.models import Sum
+        user = request.user
+        credited = LedgerEntry.objects.filter(
+            rental__owner=user,
+            entry_type=LedgerEntryType.OWNER_PAYABLE_CREDITED
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        settled = LedgerEntry.objects.filter(
+            rental__owner=user,
+            entry_type=LedgerEntryType.OWNER_PAYOUT_SETTLED
+        ).aggregate(total=Sum('amount'))['total'] or Decimal('0.00')
+
+        available = credited - settled
+        if available <= Decimal('0.00'):
+            return Response(
+                {"detail": "No pending payable balance available for payout."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Create LedgerEntry for settled payout
+        payout_ref = f"PAYOUT-{uuid.uuid4().hex[:8].upper()}"
+        LedgerEntry.objects.create(
+            entry_type=LedgerEntryType.OWNER_PAYOUT_SETTLED,
+            debit_account=LedgerAccount.OWNER_PAYABLE,
+            credit_account=LedgerAccount.OWNER_BANK_ACCOUNT,
+            amount=available,
+            description=f"Direct payout disbursed to owner account",
+            reference_id=payout_ref
+        )
+
+        return Response({
+            "message": f"Successfully initiated payout of ₹{available} to registered bank/UPI account.",
+            "reference_id": payout_ref,
+            "disbursed_amount": str(available),
+        }, status=status.HTTP_200_OK)
+

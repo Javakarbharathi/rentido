@@ -10,7 +10,8 @@ import {
   LogIn, 
   Sparkles,
   Wrench,
-  ChevronDown
+  ChevronDown,
+  PackagePlus
 } from 'lucide-react';
 
 interface NavbarProps {
@@ -22,6 +23,7 @@ interface NavbarProps {
   onLogout: () => void;
   onOpenDashboard: () => void;
   onOpenTrustModal: () => void;
+  onOpenOwnerStudio: () => void;
 }
 
 const CITIES = ['All Cities', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune'];
@@ -34,7 +36,8 @@ export default function Navbar({
   onOpenAuth,
   onLogout,
   onOpenDashboard,
-  onOpenTrustModal
+  onOpenTrustModal,
+  onOpenOwnerStudio
 }: NavbarProps) {
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
@@ -91,6 +94,15 @@ export default function Navbar({
             <Sparkles className="w-4 h-4 text-amber-700" />
             <span>Trust Score</span>
           </button>
+
+          <button
+            onClick={onOpenOwnerStudio}
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-full shadow-sm shadow-indigo-200 transition-all cursor-pointer hover:shadow-md"
+          >
+            <PackagePlus className="w-3.5 h-3.5" />
+            <span>List Gear</span>
+          </button>
+
 
           <a 
             href="http://127.0.0.1:8000/admin/" 
