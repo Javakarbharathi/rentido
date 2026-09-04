@@ -17,7 +17,8 @@ import {
   Building,
   Tag
 } from 'lucide-react';
-import { createAsset, createListing, fetchOwnerListings, fetchOwnerEarnings, requestOwnerPayout } from '@/lib/api';
+import { createAsset, createListing, fetchOwnerListings, fetchOwnerEarnings, requestOwnerPayout, addRole } from '@/lib/api';
+import { isOwnerUser } from '@/lib/auth';
 
 interface OwnerStudioModalProps {
   isOpen: boolean;
@@ -26,6 +27,7 @@ interface OwnerStudioModalProps {
   token: string;
   onOpenAuth: () => void;
   onListingCreated: () => void;
+  onUserUpdated?: (user: any) => void;
 }
 
 const CATEGORIES = [
@@ -48,6 +50,7 @@ export default function OwnerStudioModal({
   token,
   onOpenAuth,
   onListingCreated,
+  onUserUpdated,
 }: OwnerStudioModalProps) {
   const [activeTab, setActiveTab] = useState<'create' | 'portfolio' | 'earnings'>('create');
 
@@ -195,7 +198,77 @@ export default function OwnerStudioModal({
     }
   };
 
+  const isAuthorized = isOwnerUser(user);
+  const [activatingRole, setActivatingRole] = useState(false);
+  const [roleError, setRoleError] = useState<string | null>(null);
+
+  const handleActivateOwner = async () => {
+    if (!token) {
+      onOpenAuth();
+      return;
+    }
+    setActivatingRole(true);
+    setRoleError(null);
+    try {
+      const res = await addRole(token, 'OWNER');
+      if (res.user) {
+        if (onUserUpdated) onUserUpdated(res.user);
+      } else {
+        setRoleError(res.detail || 'Could not activate Owner role.');
+      }
+    } catch (err: any) {
+      setRoleError('Failed to contact server to activate role.');
+    } finally {
+      setActivatingRole(false);
+    }
+  };
+
   if (!isOpen) return null;
+
+  if (!isAuthorized) {
+    return (
+      <div 
+        onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm cursor-pointer"
+      >
+        <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-gray-100 overflow-hidden cursor-default p-8 text-center">
+          <div className="w-16 h-16 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center mx-auto mb-4">
+            <PackagePlus className="w-8 h-8" />
+          </div>
+          <h3 className="text-xl font-black text-gray-950">Equipment Host Role Required</h3>
+          <p className="text-xs text-gray-600 mt-2 leading-relaxed">
+            You are currently signed in as <strong className="text-gray-900">{user?.email || 'Guest'}</strong> (Verified Renter).
+            Publishing equipment listings and receiving double-entry escrow payouts requires an <strong>Owner Profile</strong>.
+          </p>
+          {roleError && (
+            <div className="mt-3 p-3 bg-red-50 text-red-700 text-xs rounded-xl font-medium">
+              {roleError}
+            </div>
+          )}
+          <div className="mt-6 space-y-2">
+            <button
+              type="button"
+              onClick={handleActivateOwner}
+              disabled={activatingRole}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-md cursor-pointer disabled:opacity-60 transition-colors"
+            >
+              {activatingRole ? 'Activating Owner Profile...' : '✨ Activate Equipment Owner Role Now'}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onClose();
+                onOpenAuth();
+              }}
+              className="w-full py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-xl cursor-pointer transition-colors"
+            >
+              Switch to Owner Account (rajesh.camera@rentido.com)
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div 

@@ -41,10 +41,11 @@ class UserSerializer(serializers.ModelSerializer):
             'id', 'email', 'username', 'first_name', 'last_name',
             'phone_number', 'is_email_verified', 'is_phone_verified',
             'profile_picture', 'roles', 'renter_profile', 'owner_profile',
+            'is_staff', 'is_superuser',
             'created_at', 'updated_at'
         ]
         read_only_fields = [
-            'id', 'is_email_verified', 'is_phone_verified', 'created_at', 'updated_at'
+            'id', 'is_email_verified', 'is_phone_verified', 'is_staff', 'is_superuser', 'created_at', 'updated_at'
         ]
 
 

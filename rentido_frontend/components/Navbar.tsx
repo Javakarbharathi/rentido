@@ -5,14 +5,15 @@ import {
   ShieldCheck, 
   MapPin, 
   Search, 
-  Bell, 
-  User, 
+  Sparkles, 
+  Wrench, 
+  PackagePlus, 
   LogIn, 
-  Sparkles,
-  Wrench,
-  ChevronDown,
-  PackagePlus
+  ShieldAlert, 
+  FolderClock,
+  ExternalLink
 } from 'lucide-react';
+import { isAdminUser, isOwnerUser, isRenterUser, getRoleBadgeInfo, getPrimaryRole } from '@/lib/auth';
 
 interface NavbarProps {
   selectedCity: string;
@@ -24,6 +25,7 @@ interface NavbarProps {
   onOpenDashboard: () => void;
   onOpenTrustModal: () => void;
   onOpenOwnerStudio: () => void;
+  onOpenAdminPortal?: () => void;
 }
 
 const CITIES = ['All Cities', 'Bangalore', 'Mumbai', 'Delhi', 'Hyderabad', 'Chennai', 'Pune'];
@@ -37,15 +39,22 @@ export default function Navbar({
   onLogout,
   onOpenDashboard,
   onOpenTrustModal,
-  onOpenOwnerStudio
+  onOpenOwnerStudio,
+  onOpenAdminPortal,
 }: NavbarProps) {
+  const isAdmin = isAdminUser(user);
+  const isOwner = isOwnerUser(user);
+  const isRenter = isRenterUser(user);
+  const roleBadge = getRoleBadgeInfo(user);
+  const primaryRole = getPrimaryRole(user);
+
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between gap-4">
         
         {/* Brand Logo */}
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-2 cursor-pointer" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
+          <div className="flex items-center gap-2 cursor-pointer select-none" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white shadow-md shadow-indigo-200">
               <ShieldCheck className="w-6 h-6 stroke-[2.5]" />
             </div>
@@ -53,7 +62,7 @@ export default function Navbar({
               <span className="text-2xl font-black tracking-tight text-gray-950 font-sans">
                 Rent<span className="text-indigo-600">ido</span>
               </span>
-              <div className="text-[10px] uppercase font-bold tracking-widest text-gray-700 -mt-1">
+              <div className="text-[10px] uppercase font-bold tracking-widest text-gray-500 -mt-1">
                 Escrow · Logistics · Trust
               </div>
             </div>
@@ -84,55 +93,85 @@ export default function Navbar({
           <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-2.5" />
         </div>
 
-        {/* Navigation Actions */}
+        {/* Role-Specific Navigation Actions */}
         <div className="flex items-center gap-3">
           
+          {/* Trust Score Engine (All users) */}
           <button 
+            type="button"
             onClick={onOpenTrustModal}
-            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors cursor-pointer"
           >
-            <Sparkles className="w-4 h-4 text-amber-700" />
+            <Sparkles className="w-4 h-4 text-amber-500" />
             <span>Trust Score</span>
           </button>
 
-          <button
-            onClick={onOpenOwnerStudio}
-            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-full shadow-sm shadow-indigo-200 transition-all cursor-pointer hover:shadow-md"
-          >
-            <PackagePlus className="w-3.5 h-3.5" />
-            <span>List Gear</span>
-          </button>
+          {/* 1. ADMIN-SPECIFIC ACTION: Admin Portal Deck (Only visible to Admin) */}
+          {isAdmin && (
+            <button 
+              type="button"
+              onClick={onOpenAdminPortal}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 text-xs font-bold rounded-full transition-all cursor-pointer shadow-xs"
+              title="Platform Governance & System Health"
+            >
+              <Wrench className="w-3.5 h-3.5 text-purple-700" />
+              <span>Admin Deck</span>
+            </button>
+          )}
 
+          {/* 2. OWNER-SPECIFIC ACTION: List Gear / Owner Studio (Only for Owners or Admins) */}
+          {(isOwner || !user) && (
+            <button
+              type="button"
+              onClick={onOpenOwnerStudio}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white text-xs font-bold rounded-full shadow-sm shadow-indigo-200 transition-all cursor-pointer hover:shadow-md select-none"
+            >
+              <PackagePlus className="w-3.5 h-3.5" />
+              <span>List Gear</span>
+            </button>
+          )}
 
-          <a 
-            href="http://127.0.0.1:8000/admin/" 
-            target="_blank" 
-            rel="noreferrer"
-            className="hidden md:flex items-center gap-1 text-xs font-semibold text-gray-700 hover:text-indigo-600 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
-          >
-            <Wrench className="w-3.5 h-3.5 text-gray-700" />
-            <span>Admin</span>
-          </a>
+          {/* 3. RENTER-SPECIFIC ACTION: My Rentals & OTPs (Only for Renters) */}
+          {user && isRenter && !isOwner && !isAdmin && (
+            <button
+              type="button"
+              onClick={onOpenDashboard}
+              className="flex items-center gap-1.5 px-3.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-bold rounded-full transition-all cursor-pointer shadow-xs"
+            >
+              <FolderClock className="w-3.5 h-3.5" />
+              <span>My Rentals</span>
+            </button>
+          )}
 
-          {/* User Auth Widget */}
+          {/* User Auth Widget with Role Badging */}
           {user ? (
             <div className="flex items-center gap-2">
               <button 
-                onClick={onOpenDashboard}
-                className="flex items-center gap-2 px-3.5 py-1.5 bg-indigo-50 border border-indigo-100 rounded-full text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition-colors"
+                type="button"
+                onClick={() => {
+                  if (isAdmin && onOpenAdminPortal) {
+                    onOpenAdminPortal();
+                  } else if (isOwner) {
+                    onOpenOwnerStudio();
+                  } else {
+                    onOpenDashboard();
+                  }
+                }}
+                className={`flex items-center gap-2 px-3.5 py-1.5 border rounded-full text-xs font-bold transition-all cursor-pointer select-none ${roleBadge.colorClass}`}
+                title={`Logged in as ${roleBadge.title} - Click to open dashboard`}
               >
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>{user.email.split('@')[0]}</span>
-                <span className="bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded-full text-[10px]">
-                  ⭐ 150
+                <span>{roleBadge.badge}</span>
+                <span className="opacity-80 font-normal">
+                  ({user.email.split('@')[0]})
                 </span>
               </button>
 
               <button 
                 type="button"
                 onClick={onLogout}
-                className="text-xs text-gray-700 hover:text-red-700 p-2 rounded-lg cursor-pointer transition-colors"
-                title="Log Out"
+                className="text-xs text-gray-500 hover:text-red-700 p-2 rounded-lg cursor-pointer transition-colors"
+                title="Sign Out"
               >
                 Sign Out
               </button>

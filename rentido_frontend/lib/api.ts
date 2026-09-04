@@ -206,3 +206,16 @@ export async function requestOwnerPayout(token: string) {
   return await res.json();
 }
 
+export async function addRole(token: string, role: string) {
+  const res = await fetch(`${API_BASE_URL}/auth/me/roles/add/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ role }),
+  });
+  return await res.json();
+}
+
+

@@ -8,8 +8,11 @@ import ListingCard from '@/components/ListingCard';
 import BookingModal from '@/components/BookingModal';
 import TrustBadgeModal from '@/components/TrustBadgeModal';
 import AuthModal from '@/components/AuthModal';
-import DashboardModal from '@/components/DashboardModal';
+import RenterDashboardModal from '@/components/RenterDashboardModal';
 import OwnerStudioModal from '@/components/OwnerStudioModal';
+import AdminPortalModal from '@/components/AdminPortalModal';
+import RoleContextBanner from '@/components/RoleContextBanner';
+import { isAdminUser, isOwnerUser, isRenterUser } from '@/lib/auth';
 import { fetchListings, Listing } from '@/lib/api';
 import { Shield, Sparkles, Truck, Wrench, HeartHandshake } from 'lucide-react';
 
@@ -129,8 +132,9 @@ export default function Home() {
   const [selectedListingForBooking, setSelectedListingForBooking] = useState<Listing | null>(null);
   const [isTrustModalOpen, setIsTrustModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isRenterDashboardOpen, setIsRenterDashboardOpen] = useState(false);
   const [isOwnerStudioOpen, setIsOwnerStudioOpen] = useState(false);
+  const [isAdminPortalOpen, setIsAdminPortalOpen] = useState(false);
 
   // User state with localStorage persistence
   const [user, setUser] = useState<any>(null);
@@ -206,8 +210,9 @@ export default function Home() {
         unreadCount={0}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onLogout={handleLogout}
-        onOpenDashboard={() => setIsDashboardOpen(true)}
+        onOpenDashboard={() => setIsRenterDashboardOpen(true)}
         onOpenTrustModal={() => setIsTrustModalOpen(true)}
+        onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
         onOpenOwnerStudio={() => {
           if (!user) {
             setIsAuthModalOpen(true);
@@ -215,6 +220,15 @@ export default function Home() {
             setIsOwnerStudioOpen(true);
           }
         }}
+      />
+
+      {/* Role Contextual Banner */}
+      <RoleContextBanner
+        user={user}
+        onOpenAdminPortal={() => setIsAdminPortalOpen(true)}
+        onOpenOwnerStudio={() => setIsOwnerStudioOpen(true)}
+        onOpenRenterDashboard={() => setIsRenterDashboardOpen(true)}
+        onOpenTrustModal={() => setIsTrustModalOpen(true)}
       />
 
       {/* Hero Section */}
@@ -321,9 +335,11 @@ export default function Home() {
             <a href="http://127.0.0.1:8000/api/docs/" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
               OpenAPI Swagger
             </a>
-            <a href="http://127.0.0.1:8000/admin/" target="_blank" rel="noreferrer" className="hover:text-white transition-colors">
-              Django Admin Portal
-            </a>
+            {isAdminUser(user) && (
+              <a href="http://127.0.0.1:8000/admin/" target="_blank" rel="noreferrer" className="text-purple-400 hover:text-purple-300 transition-colors font-medium">
+                Django Admin Portal
+              </a>
+            )}
           </div>
         </div>
       </footer>
@@ -348,12 +364,17 @@ export default function Home() {
         onSuccess={handleLoginSuccess}
       />
 
-      <DashboardModal
-        isOpen={isDashboardOpen}
-        onClose={() => setIsDashboardOpen(false)}
+      {/* Renter Specific Command Center */}
+      <RenterDashboardModal
+        isOpen={isRenterDashboardOpen}
+        onClose={() => setIsRenterDashboardOpen(false)}
         user={user}
+        onBrowseGear={() => {
+          window.scrollTo({ top: 600, behavior: 'smooth' });
+        }}
       />
 
+      {/* Owner Specific Studio & Portfolio */}
       <OwnerStudioModal
         isOpen={isOwnerStudioOpen}
         onClose={() => setIsOwnerStudioOpen(false)}
@@ -361,6 +382,19 @@ export default function Home() {
         token={token}
         onOpenAuth={() => setIsAuthModalOpen(true)}
         onListingCreated={loadData}
+        onUserUpdated={(updatedUser) => {
+          setUser(updatedUser);
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('rentido_user', JSON.stringify(updatedUser));
+          }
+        }}
+      />
+
+      {/* Admin Specific Executive Command Deck */}
+      <AdminPortalModal
+        isOpen={isAdminPortalOpen}
+        onClose={() => setIsAdminPortalOpen(false)}
+        user={user}
       />
 
     </div>

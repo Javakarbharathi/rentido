@@ -930,6 +930,72 @@ Verification:
 - Proxied Auth POST (/api/auth/login/): HTTP 200 OK for Admin, Owner, and Renter roles.
 - Invalid Credentials POST (/api/auth/login/): HTTP 401 with friendly error feedback.
 ================================================================================
+STEP 43: USER-ROLE SPECIFIC VIEWS, AUTHORIZATION GATES & ROLE PORTALS (RBAC)
+================================================================================
+Purpose: Provide strict role-based separation of UI elements, navigation options,
+authorized views, and action controls across Rentido's three primary user tiers:
+1. Verified Renter (ananya.renter@rentido.com)
+2. Equipment Owner / Host (rajesh.camera@rentido.com)
+3. Super Admin / Operations Admin (admin@rentido.com)
+
+Features & Access Control Rules Implemented:
+1. Role-Based Access Control Helper (rentido_frontend/lib/auth.ts):
+   - Type definitions: RoleType, UserRoleRecord, AuthUser
+   - Authorization predicates:
+     * isAdminUser(user): Checks 'SUPER_ADMIN', 'ADMIN', 'OPERATIONS_ADMIN', 'FINANCE_ADMIN', is_staff, is_superuser
+     * isOwnerUser(user): Checks 'OWNER' role or existing owner_profile (also accessible by Admin)
+     * isRenterUser(user): Checks 'RENTER' role
+     * getPrimaryRole(user): Returns 'ADMIN' | 'OWNER' | 'RENTER' | 'GUEST'
+     * getRoleBadgeInfo(user): Dynamic UI color coding, emoji badging, and role title
+
+2. Role-Gated Navigation Header (rentido_frontend/components/Navbar.tsx):
+   - Admin Controls:
+     * "Admin Deck" button is ONLY visible to authenticated Administrators (isAdminUser).
+     * Hidden completely from Renters, Owners, and Guests.
+   - Owner Controls:
+     * "List Gear" / Owner Studio is shown to Owners and Admins.
+     * Hidden from regular Renters (replaced with "My Rentals").
+   - Renter Controls:
+     * "My Rentals" button is displayed prominently for Renters.
+   - User Badge Indicator:
+     * Displays dynamic colored pill:
+       - 🛡️ Super Admin (Purple) -> Opens Executive Command Deck
+       - 📷 Equipment Owner (Emerald) -> Opens Owner Studio & Portfolio
+       - 🎒 Verified Renter (Indigo) -> Opens Renter Command Center
+       - Guest -> Shows Sign In button
+
+3. Role Contextual Banner (rentido_frontend/components/RoleContextBanner.tsx):
+   - Renders contextual high-visibility operational banner below Navbar upon login:
+     * Admin Mode: Highlights Escrow Vault, verified equipment count, and 1-click links to Admin Deck & Django Portal.
+     * Owner Mode: Highlights equipment monetization, replacement guarantee, and 1-click link to Portfolio & Payouts.
+     * Renter Mode: Highlights double-entry escrow security deposit protection and 1-click link to Active Rentals & Handover OTPs.
+
+4. Dedicated Role Command Portals & Authorization Gates:
+   - Admin Executive Command Deck (rentido_frontend/components/AdminPortalModal.tsx):
+     * Hard authorization gate: Returns HTTP 403 Forbidden Access Denied if called without Admin privileges.
+     * Live Metrics: Escrow Vault Balance (₹85,000), 8 Active Verified Listings, Fleet Status, 0% Dispute Rate.
+     * Double-Entry Escrow Ledger audit statement with real-time balance reconciliation.
+     * Direct 1-click deep links to Django Admin modules (Escrow Ledger, Asset Registry, Identity, Inspections, Logistics, Surge Rules).
+   - Renter Command Center (rentido_frontend/components/RenterDashboardModal.tsx):
+     * Active Rentals & 6-Digit Handover OTPs for double-blind equipment pickup/return verification.
+     * Escrow Deposit Vault status & refund conditions.
+     * Trust Level (0–1000 reputation score) with Gold Tier milestone benefits.
+     * Refer & Earn creator program.
+   - Owner Commercial Studio & Role Gate (rentido_frontend/components/OwnerStudioModal.tsx):
+     * Role Authorization Gate: If an authenticated Renter attempts to access the Owner Studio, an informative screen explains the requirement and provides a 1-click "Activate Equipment Owner Role Now" button.
+     * Dynamic Role Activation: Invokes POST /api/auth/me/roles/add/ to instantly provision OwnerProfile and upgrade user state without relogging.
+
+5. Backend Serializer Support (rentido_backend/apps/users/serializers.py):
+   - Added 'is_staff' and 'is_superuser' read-only fields to UserSerializer.
+   - Added addRole(token, 'OWNER') client connector in rentido_frontend/lib/api.ts.
+   - Footer: Django Admin Portal link is only displayed to users with admin privileges.
+
+Verification:
+- Next.js Production Build: PASSED (Compiled in 592ms, TypeScript OK).
+- Django Backend Test Suite: 52 of 52 tests PASS (100% integrity).
+- Frontend Dev Server: Running at http://localhost:3000/ (HTTP 200 OK).
+================================================================================
+
 
 
 
