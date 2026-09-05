@@ -13,7 +13,7 @@ import {
   ArrowRight,
   AlertCircle
 } from 'lucide-react';
-import { Listing, validateCoupon, API_BASE_URL } from '@/lib/api';
+import { Listing, validateCoupon, createRentalBooking, processRentalPayment } from '@/lib/api';
 
 interface BookingModalProps {
   listing: Listing | null;
@@ -38,6 +38,7 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
   // Booking completion state
   const [bookingSuccess, setBookingSuccess] = useState<any>(null);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [bookingError, setBookingError] = useState<string | null>(null);
 
   // Financial calculations
   const dailyRate = parseFloat(listing.rental_price) || 1500;
@@ -91,27 +92,68 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
     }
   };
 
-  // Handle Simulated 1-Click Checkout
+  // Handle Real 1-Click Escrow Booking
   const handleConfirmBooking = async () => {
     if (!user) {
       onOpenAuth();
       return;
     }
 
+    const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
+    if (!token) {
+      onOpenAuth();
+      return;
+    }
+
     setBookingLoading(true);
-    // Simulate payment & booking creation
-    setTimeout(() => {
-      setBookingLoading(false);
-      const generatedOtp = Math.floor(100000 + Math.random() * 900000).toString();
-      setBookingSuccess({
-        rentalId: Math.floor(1000 + Math.random() * 9000),
-        otp: generatedOtp,
-        totalPaid: totalPayable,
-        depositHeld: deposit,
-        dates: `${days} Days`,
-        fulfillment: fulfillment === 'DRIVER_DELIVERY' ? 'Doorstep Delivery' : 'Self Pickup'
+    setBookingError(null);
+
+    const now = new Date();
+    const start = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
+    const end = new Date(now.getTime() + (24 + days * 24) * 60 * 60 * 1000).toISOString();
+
+    try {
+      // 1. Create Real Rental Reservation in Django Backend
+      const rentalRes = await createRentalBooking(token, {
+        listing_id: listing.id,
+        start_datetime: start,
+        end_datetime: end,
+        fulfillment_type: fulfillment,
       });
-    }, 1200);
+
+      if (!rentalRes.ok && rentalRes.id === undefined) {
+        const errorDetail = rentalRes.availability?.[0]
+          || (Array.isArray(rentalRes.non_field_errors) ? rentalRes.non_field_errors[0] : null)
+          || rentalRes.detail
+          || 'Unable to place reservation. The asset may already be reserved for these dates.';
+        setBookingError(errorDetail);
+        setBookingLoading(false);
+        return;
+      }
+
+      const rentalId = rentalRes.id;
+      const handoverOtp = rentalRes.handover_otp;
+      const returnOtp = rentalRes.return_otp;
+      const snapshot = rentalRes.pricing_snapshot;
+
+      // 2. Process Escrow Payment & Lock Security Deposit in Ledger
+      const payRes = await processRentalPayment(token, rentalId, 'UPI');
+
+      setBookingSuccess({
+        rentalId: rentalId,
+        otp: handoverOtp,
+        returnOtp: returnOtp,
+        totalPaid: snapshot ? parseFloat(snapshot.total_amount_paid) : totalPayable,
+        depositHeld: snapshot ? parseFloat(snapshot.security_deposit_amount) : deposit,
+        dates: `${days} ${days === 1 ? 'Day' : 'Days'}`,
+        fulfillment: fulfillment === 'DRIVER_DELIVERY' ? 'Doorstep Delivery' : 'Self Pickup',
+        txnId: payRes.transaction_id || `TXN-${rentalId}`
+      });
+    } catch (err: any) {
+      setBookingError(err.message || 'An error occurred during booking. Please try again.');
+    } finally {
+      setBookingLoading(false);
+    }
   };
 
   return (
@@ -324,6 +366,13 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
                 Your ₹{deposit.toFixed(2)} deposit is locked in Rentido's double-entry escrow ledger. It is returned automatically to your source account upon return inspection approval.
               </span>
             </div>
+
+            {bookingError && (
+              <div className="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs font-semibold flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                <span>{bookingError}</span>
+              </div>
+            )}
 
             {/* Checkout Action Button */}
             <button

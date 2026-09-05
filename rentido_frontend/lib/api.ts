@@ -391,5 +391,112 @@ export async function fetchSurgeRules(token?: string) {
   }
 }
 
+export async function createRentalBooking(token: string, bookingData: {
+  listing_id: number;
+  start_datetime: string;
+  end_datetime: string;
+  fulfillment_type: 'SELF_PICKUP' | 'DRIVER_DELIVERY';
+}) {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/rentals/book/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+      body: JSON.stringify(bookingData),
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/rentals/book/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify(bookingData),
+        });
+      }
+    }
+
+    const data = await res.json().catch(() => ({ detail: 'Failed to parse booking response.' }));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || 'Network error occurred while creating booking.' };
+  }
+}
+
+export async function processRentalPayment(token: string, rentalId: number, paymentMethod: string = 'UPI') {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/payments/pay/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+      body: JSON.stringify({
+        rental_id: rentalId,
+        payment_method: paymentMethod,
+      }),
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/payments/pay/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({
+            rental_id: rentalId,
+            payment_method: paymentMethod,
+          }),
+        });
+      }
+    }
+
+    const data = await res.json().catch(() => ({ detail: 'Failed to parse payment response.' }));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || 'Network error occurred while processing payment.' };
+  }
+}
+
+export async function fetchUserRentals(token: string) {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/rentals/`, {
+      headers: { Authorization: `Bearer ${activeToken}` },
+      cache: 'no-store',
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/rentals/`, {
+          headers: { Authorization: `Bearer ${activeToken}` },
+          cache: 'no-store',
+        });
+      }
+    }
+
+    if (!res.ok) return [];
+    const data = await res.json().catch(() => []);
+    return data.results || data || [];
+  } catch (err) {
+    console.warn('Could not fetch user rentals', err);
+    return [];
+  }
+}
+
 
 

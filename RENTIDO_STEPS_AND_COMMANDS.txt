@@ -1112,6 +1112,54 @@ Verification:
   * `/api/ledger/request-payout/` (with 0 balance): HTTP 400 Bad Request with clean JSON: `{"detail": "No pending payable balance available for payout."}`.
 ================================================================================
 
+================================================================================
+STEP 46: INTEGRATE REAL RENTER BOOKING, ESCROW PAYMENT & LIVE DASHBOARD WORKFLOW
+================================================================================
+Issue / Gap Identified:
+- In `BookingModal.tsx`, `handleConfirmBooking` utilized a client-side simulated `setTimeout`
+  with randomized mock IDs instead of calling the backend `POST /api/rentals/book/` and
+  `POST /api/payments/pay/` endpoints.
+- In `RenterDashboardModal.tsx`, the active bookings and escrow deposit tabs displayed
+  hardcoded static cards instead of fetching the logged-in renter's live reservations.
+- `rentido_frontend/lib/api.ts` lacked client connector functions for `createRentalBooking`,
+  `processRentalPayment`, and `fetchUserRentals`.
+
+Fix Implementation:
+1. Frontend API Helpers (`rentido_frontend/lib/api.ts`):
+   - Added `createRentalBooking(token, bookingData)` to submit real reservations to `POST /api/rentals/book/`.
+   - Added `processRentalPayment(token, rentalId, paymentMethod)` to trigger `POST /api/payments/pay/`,
+     which confirms the rental, moves status to `CONFIRMED`, locks the security deposit in
+     `SECURITY_DEPOSIT_ESCROW` with status `HELD`, and records the full double-entry ledger entries.
+   - Added `fetchUserRentals(token)` to retrieve live rentals via `GET /api/rentals/` with automatic
+     SimpleJWT token refresh retry.
+2. Real-Time Escrow Booking UI (`rentido_frontend/components/BookingModal.tsx`):
+   - Wired `handleConfirmBooking` to execute `createRentalBooking` and `processRentalPayment`.
+   - Added `bookingError` banner to surface real validation feedback (e.g. availability conflicts).
+   - Displayed real `rental.id`, cryptographic `handover_otp`, `return_otp`, and frozen snapshot totals upon booking.
+3. Live Renter Command Center (`rentido_frontend/components/RenterDashboardModal.tsx`):
+   - Connected `useEffect` to fetch live bookings for the authenticated user.
+   - Dynamically renders active rental cards with live status badges (`CONFIRMED`, `ACTIVE`, `RETURN_REQUESTED`, `COMPLETED`).
+   - Dynamically displays the 6-digit **Secure Handover OTP** during the confirmed phase and the **Return Handover Secret OTP** during active rental.
+   - Itemized and aggregated real security deposit holdings in the Escrow Deposit Vault tab.
+
+Verification:
+- Next.js Production Build: PASSED (Compiled in 1192ms, TypeScript clean, 0 errors).
+- Django Backend Test Suite: 52 of 52 tests PASS (Ran 52 tests in 75.0s, OK).
+- API Booking & Double-Entry Ledger Verification:
+  * Booked Rental ID #4 (`RED Komodo 6K Cinema Camera Kit`) for renter `ananya.renter@rentido.com`.
+  * Paid ₹28,250.00 (`UPI`) via `/api/payments/pay/`.
+  * Rental status verified: `CONFIRMED`.
+  * Handover OTP: `588732`, Return OTP: `491088`.
+  * Double-entry ledger verified in MySQL:
+    - Debit `RENTER_BANK_ACCOUNT` ₹28,250.00 / Credit `ESCROW_INFLOW` ₹28,250.00
+    - Debit `ESCROW_INFLOW` ₹20,000.00 / Credit `SECURITY_DEPOSIT_ESCROW` ₹20,000.00
+    - Debit `ESCROW_INFLOW` ₹805.00 / Credit `PLATFORM_REVENUE` ₹805.00
+    - Debit `ESCROW_INFLOW` ₹50.00 / Credit `PLATFORM_REVENUE` ₹50.00
+    - Debit `ESCROW_INFLOW` ₹150.00 / Credit `PLATFORM_REVENUE` ₹150.00
+    - Debit `ESCROW_INFLOW` ₹7,245.00 / Credit `OWNER_PAYABLE` ₹7,245.00
+  * Security deposit record created: Deposit ID #1, Total ₹20,000.00, Status `HELD`.
+================================================================================
+
 
 
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   KeyRound, 
@@ -15,6 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { AuthUser, isRenterUser } from '@/lib/auth';
+import { fetchUserRentals } from '@/lib/api';
 
 interface RenterDashboardModalProps {
   isOpen: boolean;
@@ -32,6 +33,21 @@ export default function RenterDashboardModal({
   if (!isOpen) return null;
 
   const [activeTab, setActiveTab] = useState<'rentals' | 'escrow' | 'trust' | 'referrals'>('rentals');
+  const [rentals, setRentals] = useState<any[]>([]);
+  const [loadingRentals, setLoadingRentals] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
+      if (token) {
+        setLoadingRentals(true);
+        fetchUserRentals(token)
+          .then((res) => setRentals(res || []))
+          .catch((e) => console.warn('Could not load user rentals', e))
+          .finally(() => setLoadingRentals(false));
+      }
+    }
+  }, [isOpen]);
 
   return (
     <div 
@@ -114,52 +130,105 @@ export default function RenterDashboardModal({
           {/* Active Rentals Tab */}
           {activeTab === 'rentals' && (
             <div className="space-y-4">
-              
-              {/* Sample Active Rental Card */}
-              <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-200">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="font-bold text-sm text-gray-950">Sony FX3 Full-Frame Cinema Camera</span>
-                      <span className="bg-emerald-100 text-emerald-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
-                        ACTIVE RENTAL
-                      </span>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-0.5">Booking #RTD-8821 · Bangalore (Indiranagar)</div>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-xs text-gray-500">Rental Period</div>
-                    <div className="text-xs font-bold text-gray-900">Sep 04 – Sep 06 (2 Days)</div>
-                  </div>
+              {loadingRentals ? (
+                <div className="p-8 text-center text-xs font-semibold text-gray-500">
+                  <div className="w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  Loading your rental reservations...
                 </div>
+              ) : rentals.length === 0 ? (
+                <div className="p-8 text-center rounded-2xl bg-gray-50 border border-gray-200">
+                  <ShieldCheck className="w-10 h-10 text-indigo-400 mx-auto mb-2" />
+                  <h4 className="font-bold text-gray-900 text-sm">No Active Bookings Yet</h4>
+                  <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+                    Browse our vetted catalog of cinema cameras, drones, and gear to place your first reservation with 100% escrow protection.
+                  </p>
+                </div>
+              ) : (
+                rentals.map((rental: any) => {
+                  const isConfirmed = rental.status === 'CONFIRMED' || rental.status === 'PAYMENT_PENDING';
+                  const isActive = rental.status === 'ACTIVE';
+                  const isReturn = rental.status === 'RETURN_REQUESTED';
 
-                {/* Handover OTP Verification Widget */}
-                <div className="mt-4 p-4 rounded-xl bg-white border border-indigo-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                      <KeyRound className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="text-xs font-bold text-gray-900">Return Handover Secret OTP</div>
-                      <div className="text-[11px] text-gray-500">Share this code with the driver/owner upon equipment return</div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-200">
-                    <span className="font-mono text-lg font-black tracking-widest text-indigo-700">749 201</span>
-                  </div>
-                </div>
+                  return (
+                    <div key={rental.id} className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-gray-200">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-sm text-gray-950">
+                              {rental.listing?.title || 'Equipment Rental'}
+                            </span>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              isActive ? 'bg-emerald-100 text-emerald-800' :
+                              isConfirmed ? 'bg-blue-100 text-blue-800' :
+                              isReturn ? 'bg-amber-100 text-amber-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {rental.status_display || rental.status}
+                            </span>
+                          </div>
+                          <div className="text-xs text-gray-500 mt-0.5">
+                            Booking #{rental.id} · {rental.listing?.city || 'Bangalore'} ({rental.listing?.area || 'Hub'})
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-xs text-gray-500">Rental Period</div>
+                          <div className="text-xs font-bold text-gray-900">
+                            {rental.start_datetime ? rental.start_datetime.split('T')[0] : ''} – {rental.end_datetime ? rental.end_datetime.split('T')[0] : ''}
+                          </div>
+                        </div>
+                      </div>
 
-                {/* Logistics Status */}
-                <div className="mt-3 flex items-center justify-between text-xs text-gray-600 px-1">
-                  <div className="flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5 text-indigo-600" />
-                    <span>Fulfilled via Rentido Logistics (Driver: Ramesh K.)</span>
-                  </div>
-                  <span className="text-emerald-600 font-semibold flex items-center gap-1">
-                    <CheckCircle2 className="w-3 h-3" /> Pre-inspection Passed
-                  </span>
-                </div>
-              </div>
+                      {/* Handover OTP Widget */}
+                      {isConfirmed && rental.handover_otp && (
+                        <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
+                              <KeyRound className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-gray-900">Secure Handover OTP</div>
+                              <div className="text-[11px] text-gray-500">Share this code with the driver upon gear delivery to activate rental</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-200">
+                            <span className="font-mono text-lg font-black tracking-widest text-indigo-700">{rental.handover_otp}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Return OTP Widget */}
+                      {(isActive || isReturn) && rental.return_otp && (
+                        <div className="p-4 rounded-xl bg-white border border-amber-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">
+                              <KeyRound className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-gray-900">Return Handover Secret OTP</div>
+                              <div className="text-[11px] text-gray-500">Share this code with the driver upon gear return collection</div>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200">
+                            <span className="font-mono text-lg font-black tracking-widest text-amber-700">{rental.return_otp}</span>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Pricing & Escrow summary */}
+                      <div className="flex items-center justify-between text-xs text-gray-600 px-1 pt-1">
+                        <div className="flex items-center gap-1.5">
+                          <Truck className="w-3.5 h-3.5 text-indigo-600" />
+                          <span>Fulfillment: {rental.fulfillment_type_display || (rental.fulfillment_type === 'DRIVER_DELIVERY' ? 'Doorstep Delivery' : 'Self Pickup')}</span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span>Deposit: <strong className="text-emerald-700">₹{rental.pricing_snapshot?.security_deposit_amount || '0.00'}</strong></span>
+                          <span>Paid: <strong className="text-gray-900">₹{rental.pricing_snapshot?.total_amount_paid || '0.00'}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
 
               {/* Browse More Gear Action */}
               <div className="p-4 rounded-2xl bg-indigo-50/60 border border-indigo-100 flex items-center justify-between">
@@ -199,12 +268,19 @@ export default function RenterDashboardModal({
               <div className="p-5 rounded-2xl bg-gray-50 border border-gray-200">
                 <div className="flex justify-between items-center mb-3">
                   <span className="text-xs font-bold text-gray-700">Active Refundable Deposit Held</span>
-                  <span className="text-xl font-black text-emerald-700 font-mono">₹15,000.00</span>
+                  <span className="text-xl font-black text-emerald-700 font-mono">
+                    ₹{rentals
+                      .filter((r: any) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED')
+                      .reduce((sum: number, r: any) => sum + (parseFloat(r.pricing_snapshot?.security_deposit_amount) || 0), 0)
+                      .toFixed(2)}
+                  </span>
                 </div>
                 <div className="text-[11px] text-gray-500 space-y-1">
                   <div className="flex justify-between">
-                    <span>Associated Rental:</span>
-                    <span className="font-semibold text-gray-800">Sony FX3 (Body) #RTD-8821</span>
+                    <span>Active Protected Reservations:</span>
+                    <span className="font-semibold text-gray-800">
+                      {rentals.filter((r: any) => r.status !== 'COMPLETED' && r.status !== 'CANCELLED').length} Rentals
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span>Deposit Release Condition:</span>
