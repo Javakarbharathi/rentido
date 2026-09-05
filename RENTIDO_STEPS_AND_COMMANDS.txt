@@ -1196,11 +1196,75 @@ Verification:
 - Tested date selection in BookingModal: verified custom shoot start date properly submits and passes availability validation.
 ================================================================================
 
+================================================================================
+STEP 48: RETURN OTP VERIFICATION, ESCROW DEPOSIT RELEASE & OWNER INSTANT PAYOUT
+================================================================================
+Purpose:
+- Execute and verify the complete return phase of the rental lifecycle for Rental #14
+  (RED Komodo 6K Global Shutter Cinema Camera Kit).
+- Verify double-blind Return OTP (`437561`) to transition rental status to `COMPLETED`.
+- Settle held security deposit (Deposit #2) with ₹0.00 deduction for clean return,
+  releasing ₹20,000.00 from escrow back to renter `ananya.renter@rentido.com`.
+- Disburse owner rental earnings (₹18,112.50) to registered bank/UPI account for owner
+  `admin@rentido.com` via `/api/ledger/request-payout/`.
+- Reconcile and audit immutable double-entry financial ledger accounts to ensure 100%
+  mathematical balance.
+- Enhance Renter Command Center frontend with live interactive OTP verification actions,
+  completion banners, and an itemized escrow ledger breakdown.
 
+Frontend Enhancements:
+1. API Connector Additions (`rentido_frontend/lib/api.ts`):
+   - `verifyHandoverOTP(token, rentalId, otp)`: Calls `POST /api/rentals/{id}/handover/`
+   - `verifyReturnOTP(token, rentalId, otp)`: Calls `POST /api/rentals/{id}/return/`
+   - `settleDeposit(token, depositId, deductionAmount, reason)`: Calls `POST /api/deposits/{id}/settle/`
+2. Interactive Renter Command Center (`rentido_frontend/components/RenterDashboardModal.tsx`):
+   - Added `Verify Handover` button directly in the Confirmed card to test activation without terminal.
+   - Added `Verify Return & Complete` button directly in the Active card to test return handover.
+   - Added inline status feedback alerts showing real-time success or failure response.
+   - Added Completed Rental & Escrow Release widget on `COMPLETED` rentals:
+     * Badged as "Escrow Settled ✓" with confirmation of deposit refund.
+   - Added Reservation Escrow Ledger History table in the Escrow Vault tab:
+     * Itemizes each rental reservation, security deposit amount, and real-time status ("Locked in Escrow" vs "Refunded to Bank").
 
+Live Testing & Execution Sequence:
+1. Handover Verification (Rental #14):
+   - Handover OTP `244068` verified via `POST /api/rentals/14/handover/`.
+   - Rental status transitioned to `ACTIVE`.
+2. Return OTP Verification (Rental #14):
+   - Return OTP `437561` verified via `POST /api/rentals/14/return/`.
+   - Rental status transitioned from `ACTIVE` to `COMPLETED`.
+3. Post-Return Security Deposit Settlement:
+   - Settle Deposit #2 via `POST /api/deposits/2/settle/` with deduction ₹0.00.
+   - Deposit status updated: `RELEASED` ("Fully Released to Renter").
+   - Double-entry refund ledger entry recorded:
+     * Entry #16: `DEPOSIT_RELEASED`
+     * Debit Account: `SECURITY_DEPOSIT_ESCROW` (₹20,000.00)
+     * Credit Account: `RENTER_BANK_ACCOUNT` (₹20,000.00)
+     * Reference: `DEP-REFUND-14`
+4. Owner Summary & Instant Payout:
+   - Evaluated `GET /api/ledger/owner-summary/` for owner `admin@rentido.com`:
+     * Total Credited: ₹18,112.50
+     * Total Settled: ₹0.00
+     * Pending Payout Balance: ₹18,112.50
+   - Executed `POST /api/ledger/request-payout/`:
+     * Payout Disbursed: ₹18,112.50
+     * Reference: `PAYOUT-C9014D48`
+     * Double-entry ledger entry created:
+       - Entry #17: `OWNER_PAYOUT_SETTLED`
+       - Debit Account: `OWNER_PAYABLE` (₹18,112.50)
+       - Credit Account: `OWNER_BANK_ACCOUNT` (₹18,112.50)
+   - Re-checked `GET /api/ledger/owner-summary/`:
+     * Pending Payout Balance: ₹0.00
+     * Total Payout Settled: ₹18,112.50
 
+Ledger Reconciliation Trial Balance:
+- `ESCROW_INFLOW`: Debits ₹68,625.00 / Credits ₹60,525.00
+- `OWNER_PAYABLE`: Debits ₹26,212.50 / Credits ₹26,212.50 (Net ₹0.00 - fully cleared)
+- `OWNER_BANK_ACCOUNT`: Credits ₹26,212.50 (Disbursed to owner)
+- `SECURITY_DEPOSIT_ESCROW` (Rental #14): Debits ₹20,000.00 / Credits ₹20,000.00 (Net ₹0.00 - fully refunded)
+- `PLATFORM_REVENUE`: Credits ₹2,412.50 (Earned platform commissions & fees)
 
-
-
-
-
+Verification:
+- Next.js Production Build: PASSED (Compiled in 866ms, 0 errors, TypeScript clean).
+- Django Backend Test Suite: 52 of 52 tests PASS (Ran 52 tests in 85.5s, OK).
+================================================================================

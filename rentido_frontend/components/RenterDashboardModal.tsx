@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { AuthUser, isRenterUser } from '@/lib/auth';
-import { fetchUserRentals } from '@/lib/api';
+import { fetchUserRentals, verifyHandoverOTP, verifyReturnOTP } from '@/lib/api';
 
 interface RenterDashboardModalProps {
   isOpen: boolean;
@@ -35,19 +35,69 @@ export default function RenterDashboardModal({
   const [activeTab, setActiveTab] = useState<'rentals' | 'escrow' | 'trust' | 'referrals'>('rentals');
   const [rentals, setRentals] = useState<any[]>([]);
   const [loadingRentals, setLoadingRentals] = useState(false);
+  const [actionLoading, setActionLoading] = useState<number | null>(null);
+  const [actionMsg, setActionMsg] = useState<{ id: number; text: string; type: 'success' | 'error' } | null>(null);
+
+  const loadRentals = async () => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
+    if (token) {
+      setLoadingRentals(true);
+      try {
+        const res = await fetchUserRentals(token);
+        setRentals(res || []);
+      } catch (e) {
+        console.warn('Could not load user rentals', e);
+      } finally {
+        setLoadingRentals(false);
+      }
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
-      const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
-      if (token) {
-        setLoadingRentals(true);
-        fetchUserRentals(token)
-          .then((res) => setRentals(res || []))
-          .catch((e) => console.warn('Could not load user rentals', e))
-          .finally(() => setLoadingRentals(false));
-      }
+      loadRentals();
     }
   }, [isOpen]);
+
+  const handleVerifyHandover = async (rentalId: number, otp: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
+    if (!token) return;
+    setActionLoading(rentalId);
+    setActionMsg(null);
+    try {
+      const res = await verifyHandoverOTP(token, rentalId, otp);
+      if (res.ok) {
+        setActionMsg({ id: rentalId, text: 'Handover verified! Rental is now ACTIVE.', type: 'success' });
+        await loadRentals();
+      } else {
+        setActionMsg({ id: rentalId, text: res.detail || 'Handover verification failed.', type: 'error' });
+      }
+    } catch (err: any) {
+      setActionMsg({ id: rentalId, text: 'Failed to verify handover OTP.', type: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleVerifyReturn = async (rentalId: number, otp: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('rentido_token') : null;
+    if (!token) return;
+    setActionLoading(rentalId);
+    setActionMsg(null);
+    try {
+      const res = await verifyReturnOTP(token, rentalId, otp);
+      if (res.ok) {
+        setActionMsg({ id: rentalId, text: 'Return verified! Rental COMPLETED & Escrow settlement triggered.', type: 'success' });
+        await loadRentals();
+      } else {
+        setActionMsg({ id: rentalId, text: res.detail || 'Return verification failed.', type: 'error' });
+      }
+    } catch (err: any) {
+      setActionMsg({ id: rentalId, text: 'Failed to verify return OTP.', type: 'error' });
+    } finally {
+      setActionLoading(null);
+    }
+  };
 
   return (
     <div 
@@ -148,6 +198,7 @@ export default function RenterDashboardModal({
                   const isConfirmed = rental.status === 'CONFIRMED' || rental.status === 'PAYMENT_PENDING';
                   const isActive = rental.status === 'ACTIVE';
                   const isReturn = rental.status === 'RETURN_REQUESTED';
+                  const isCompleted = rental.status === 'COMPLETED';
 
                   return (
                     <div key={rental.id} className="p-5 rounded-2xl bg-gray-50 border border-gray-200 space-y-3">
@@ -158,7 +209,8 @@ export default function RenterDashboardModal({
                               {rental.listing?.title || 'Equipment Rental'}
                             </span>
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                              isActive ? 'bg-emerald-100 text-emerald-800' :
+                              isCompleted ? 'bg-emerald-100 text-emerald-800' :
+                              isActive ? 'bg-indigo-100 text-indigo-800' :
                               isConfirmed ? 'bg-blue-100 text-blue-800' :
                               isReturn ? 'bg-amber-100 text-amber-800' :
                               'bg-gray-100 text-gray-800'
@@ -178,6 +230,16 @@ export default function RenterDashboardModal({
                         </div>
                       </div>
 
+                      {/* Action Feedback Message */}
+                      {actionMsg && actionMsg.id === rental.id && (
+                        <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                          actionMsg.type === 'success' ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : 'bg-rose-50 text-rose-800 border border-rose-200'
+                        }`}>
+                          <span>{actionMsg.type === 'success' ? '✓' : '⚠️'}</span>
+                          <span>{actionMsg.text}</span>
+                        </div>
+                      )}
+
                       {/* Handover OTP Widget */}
                       {isConfirmed && rental.handover_otp && (
                         <div className="p-4 rounded-xl bg-white border border-indigo-100 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-4">
@@ -190,8 +252,18 @@ export default function RenterDashboardModal({
                               <div className="text-[11px] text-gray-500">Share this code with the driver upon gear delivery to activate rental</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 bg-indigo-50 px-4 py-2 rounded-xl border border-indigo-200">
-                            <span className="font-mono text-lg font-black tracking-widest text-indigo-700">{rental.handover_otp}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200">
+                              <span className="font-mono text-base font-black tracking-widest text-indigo-700">{rental.handover_otp}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyHandover(rental.id, rental.handover_otp)}
+                              disabled={actionLoading === rental.id}
+                              className="text-xs font-bold px-3 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-xs shrink-0"
+                            >
+                              {actionLoading === rental.id ? 'Verifying...' : 'Verify Handover'}
+                            </button>
                           </div>
                         </div>
                       )}
@@ -208,9 +280,37 @@ export default function RenterDashboardModal({
                               <div className="text-[11px] text-gray-500">Share this code with the driver upon gear return collection</div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-2 bg-amber-50 px-4 py-2 rounded-xl border border-amber-200">
-                            <span className="font-mono text-lg font-black tracking-widest text-amber-700">{rental.return_otp}</span>
+                          <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+                              <span className="font-mono text-base font-black tracking-widest text-amber-700">{rental.return_otp}</span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleVerifyReturn(rental.id, rental.return_otp)}
+                              disabled={actionLoading === rental.id}
+                              className="text-xs font-bold px-3 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl transition-all cursor-pointer disabled:opacity-50 shadow-xs shrink-0"
+                            >
+                              {actionLoading === rental.id ? 'Completing...' : 'Verify Return & Complete'}
+                            </button>
                           </div>
+                        </div>
+                      )}
+
+                      {/* Completed Rental & Escrow Release Widget */}
+                      {isCompleted && (
+                        <div className="p-4 rounded-xl bg-emerald-50/70 border border-emerald-200/80 flex flex-col sm:flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                              <CheckCircle2 className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <div className="text-xs font-bold text-emerald-950">Rental Successfully Completed & Returned</div>
+                              <div className="text-[11px] text-emerald-700">Gear condition verified intact. Refundable security deposit of ₹{rental.pricing_snapshot?.security_deposit_amount || '0.00'} released back to your bank account.</div>
+                            </div>
+                          </div>
+                          <span className="bg-emerald-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider shrink-0 shadow-xs">
+                            Escrow Settled ✓
+                          </span>
                         </div>
                       )}
 
@@ -288,8 +388,46 @@ export default function RenterDashboardModal({
                   </div>
                 </div>
               </div>
+
+              {/* Itemized Deposit Status List */}
+              <div className="space-y-2">
+                <h5 className="text-xs font-bold uppercase tracking-wider text-gray-700">Reservation Escrow Ledger History</h5>
+                {rentals.length === 0 ? (
+                  <p className="text-xs text-gray-500 py-2">No escrow deposit transactions recorded yet.</p>
+                ) : (
+                  <div className="divide-y divide-gray-100 border border-gray-200 rounded-2xl overflow-hidden bg-white">
+                    {rentals.map((r: any) => {
+                      const isCompleted = r.status === 'COMPLETED';
+                      const depositAmt = r.pricing_snapshot?.security_deposit_amount || '0.00';
+                      return (
+                        <div key={r.id} className="p-3.5 flex items-center justify-between hover:bg-gray-50/50">
+                          <div>
+                            <div className="font-bold text-xs text-gray-950">
+                              {r.listing?.title || `Rental #${r.id}`}
+                            </div>
+                            <div className="text-[10px] text-gray-500 mt-0.5">
+                              Booking #{r.id} · Status: <span className="font-semibold text-gray-700">{r.status_display || r.status}</span>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-black text-gray-900 font-mono">
+                              ₹{depositAmt}
+                            </div>
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${
+                              isCompleted ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'
+                            }`}>
+                              {isCompleted ? 'Refunded to Bank' : 'Locked in Escrow'}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
             </div>
           )}
+
 
           {/* Trust Score Tab */}
           {activeTab === 'trust' && (

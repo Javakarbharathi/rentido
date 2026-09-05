@@ -498,5 +498,110 @@ export async function fetchUserRentals(token: string) {
   }
 }
 
+export async function verifyHandoverOTP(token: string, rentalId: number, otp: string) {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/rentals/${rentalId}/handover/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+      body: JSON.stringify({ otp }),
+    });
 
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/rentals/${rentalId}/handover/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({ otp }),
+        });
+      }
+    }
 
+    const data = await res.json().catch(() => ({ detail: 'Failed to parse handover response.' }));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || 'Network error occurred while verifying handover OTP.' };
+  }
+}
+
+export async function verifyReturnOTP(token: string, rentalId: number, otp: string) {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/rentals/${rentalId}/return/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+      body: JSON.stringify({ otp }),
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/rentals/${rentalId}/return/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({ otp }),
+        });
+      }
+    }
+
+    const data = await res.json().catch(() => ({ detail: 'Failed to parse return response.' }));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || 'Network error occurred while verifying return OTP.' };
+  }
+}
+
+export async function settleDeposit(token: string, depositId: number, deductionAmount: string = '0.00', reason: string = 'Clean gear return') {
+  let activeToken = token;
+  try {
+    let res = await fetch(`${API_BASE_URL}/deposits/${depositId}/settle/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${activeToken}`,
+      },
+      body: JSON.stringify({
+        deduction_amount: deductionAmount,
+        reason,
+      }),
+    });
+
+    if (res.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        activeToken = refreshed;
+        res = await fetch(`${API_BASE_URL}/deposits/${depositId}/settle/`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${activeToken}`,
+          },
+          body: JSON.stringify({
+            deduction_amount: deductionAmount,
+            reason,
+          }),
+        });
+      }
+    }
+
+    const data = await res.json().catch(() => ({ detail: 'Failed to parse deposit settlement response.' }));
+    return { ok: res.ok, status: res.status, ...data };
+  } catch (err: any) {
+    return { ok: false, detail: err.message || 'Network error occurred while settling deposit.' };
+  }
+}
