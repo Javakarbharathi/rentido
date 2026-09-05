@@ -1,0 +1,472 @@
+================================================================================
+          RENTIDO — COMPLETE PLATFORM KNOWLEDGE BASE & ROLE WORKFLOW GUIDE
+================================================================================
+Document: RENTIDO_KNOWLEDGE_BASE_AND_ROLE_GUIDE.txt
+Target Audience: Testers, Developers, Administrators, Business Stakeholders
+Platform URL (Frontend): http://localhost:3000
+Backend API & Admin URL: http://127.0.0.1:8000 (Admin: http://127.0.0.1:8000/admin/)
+================================================================================
+
+TABLE OF CONTENTS:
+--------------------------------------------------------------------------------
+1. EXECUTIVE SUMMARY: WHY RENTIDO WAS CREATED (THE PROBLEM & SOLUTION)
+2. HIGH-LEVEL PLATFORM ARCHITECTURE & CORE PRINCIPLES
+3. COMPLETE ROLE BREAKDOWN: EXACTLY WHAT EACH USER ROLE CAN & CANNOT DO
+   - Role 1: Renter / General Customer
+   - Role 2: Equipment Owner / Gear Partner
+   - Role 3: Platform Administrator / Executive Operator
+   - Role 4: Quality & Technical Inspector
+   - Role 5: Logistics & Fleet Delivery Driver
+4. END-TO-END RENTAL LIFECYCLE: WHAT HAPPENS ON EVERY ACTION
+   - Step 1: Authentication & Role Provisioning
+   - Step 2: Asset Registration & Listing Publication
+   - Step 3: Catalog Discovery, Search & Category Filtering
+   - Step 4: Dynamic Price Computation & Coupon Validation
+   - Step 5: Booking & Double-Entry Escrow Lock
+   - Step 6: Pre-Dispatch Inspection & Handover OTP Verification
+   - Step 7: Rental In-Use & Rental Extension
+   - Step 8: Return Collection & Return OTP Verification
+   - Step 9: Post-Return Inspection & Financial Settlement Scenarios
+   - Step 10: Owner Instant Payout & Double-Entry Disburse
+5. HOW DOUBLE-ENTRY ESCROW ACCOUNTING WORKS (THE FINANCIAL ENGINE)
+6. GLOSSARY OF CORE CONCEPTS & SYSTEM TERMS
+7. HOW TO USE THIS KNOWLEDGE TO EXECUTE THE TESTING GUIDE
+================================================================================
+
+
+================================================================================
+1. EXECUTIVE SUMMARY: WHY RENTIDO WAS CREATED (THE PROBLEM & SOLUTION)
+================================================================================
+
+THE PROBLEM:
+High-value creative, technical, and lifestyle gear—such as cinema cameras (RED Komodo,
+Sony FX3), pro audio gear, commercial drones (DJI Mavic), heavy-duty GPU workstations,
+and VR consoles—are prohibitively expensive to purchase outright (,000 to ,000+).
+Meanwhile, hundreds of professionals and rental houses possess idle equipment sitting
+on shelves losing value.
+
+However, peer-to-peer equipment rental has traditionally failed due to 5 critical risks:
+1. THEFT & FRAUD RISK: Owners fear handing high-value cameras to unvetted strangers.
+2. DAMAGE & REPAIR DISPUTES: When equipment returns scratched or defective, renters
+   claim 'it was already broken', and owners demand full replacement costs without proof.
+3. SECURITY DEPOSIT FRICTION: Renters hate handing cash deposits to strangers who might
+   never return the money or invent bogus deductions.
+4. UNRELIABLE LOGISTICS: Handing off fragile, sensitive lenses and drones via ordinary
+   courier services leads to broken equipment and zero custody tracking.
+5. NO ACCOUNTING TRANSPARENCY: Payouts to owners are delayed, untracked, and prone to
+   confusion regarding commissions and platform cuts.
+
+THE RENTIDO SOLUTION:
+Rentido is engineered as a **Trusted Local Equipment Rental Marketplace + Dual-Sided
+Protection + On-Demand Logistics + Double-Entry Escrow Accounting**.
+
+Rentido completely eliminates peer-to-peer risk through:
+- 100% Vetted Asset Inspections: Mandatory technical condition audits before & after rental.
+- Dual-Sided OTP Verification: Handover OTP and Return OTP prevent fake claims of delivery.
+- Bank-Grade Double-Entry Escrow: The renter's money and security deposit are held in escrow
+  and can only be released upon mutual signoff or audited administrative arbitration.
+- Dynamic Surge & Pricing Engine: Fair prices based on peak demand, season, and coupons.
+- Instant Owner Payouts: Settled revenue is disbursed on-demand directly into the owner's
+  bank account or UPI, fully recorded in an immutable ledger.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+2. HIGH-LEVEL PLATFORM ARCHITECTURE & CORE PRINCIPLES
+================================================================================
+
+Rentido is built on a high-integrity, modular architecture:
+
+   +------------------------------------------------------------------------+
+   |                     RENTIDO WEB APPLICATION                            |
+   |               Next.js 16 (React 19, TypeScript, Tailwind CSS)          |
+   |               Address: http://localhost:3000                           |
+   +-----------------------------------┬------------------------------------+
+                                       | HTTP / REST API (JWT Authenticated)
+                                       v
+   +------------------------------------------------------------------------+
+   |                     RENTIDO CORE BACKEND                               |
+   |              Django 5.2 + Django REST Framework + MySQL 8.0            |
+   |              Address: http://127.0.0.1:8000                           |
+   +-------+--------------+--------------+--------------+-------------+-----+
+           |              |              |              |             |
+           v              v              v              v             v
+     [IDENTITY]     [MARKETPLACE]    [RENTALS & OTP] [PAYMENTS]  [LOGISTICS &
+     - Users        - Categories     - Bookings      - Razorpay   INSPECTIONS]
+     - Roles        - Assets         - Extensions    - Escrow    - Fleet Dispatch
+     - Trust Score  - Listings       - Custody State - Ledger    - Tech Audit
+     - KYC          - Availability   - OTP Handover  - Payouts   - Dispute Arb
+
+CORE ARCHITECTURAL PRINCIPLES:
+1. Immutability: Financial records (LedgerEntry) and Audit Logs (AuditLog) can NEVER
+   be updated or deleted once created.
+2. Single Source of Truth: The double-entry ledger always balances: Total Debits = Total Credits.
+3. Separation of Concerns: Renters only see customer views; Owners see asset management
+   and payout views; Admins see the executive command deck; Inspectors and Drivers see
+   their respective task portals.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+3. COMPLETE ROLE BREAKDOWN: EXACTLY WHAT EACH USER ROLE CAN & CANNOT DO
+================================================================================
+
+--------------------------------------------------------------------------------
+ROLE 1: RENTER / GENERAL CUSTOMER (e.g., ananya.renter@rentido.com)
+--------------------------------------------------------------------------------
+Who they are:
+Filmmakers, creators, students, studio professionals, and gamers who need short-term
+access to top-tier equipment without buying it.
+
+WHAT THE RENTER CAN DO:
+- Search & Discover: Browse live marketplace listings filtered by City, Category,
+  Search Keywords (tokenized multi-word search), and Verified Condition Inspections.
+- Detailed Price Breakdown: View exact base rent, dynamic surge multiplier, applied coupon
+  discount, platform fee, delivery fee, and refundable security deposit before booking.
+- Apply Promotional Coupons: Enter coupon codes (e.g. SAVE20, WELCOME50) for verified discounts.
+- Book Gear with Escrow Protection: Pay rental fees + refundable security deposit.
+- Dual-Sided Handover Verification: Receive a 6-digit Handover OTP to share with the
+  delivery driver/owner only when the physical gear is inspected and accepted.
+- Request Rental Extension: If a project runs long, request extra days directly through
+  the platform at prorated rates.
+- Return Verification: Confirm return through a 6-digit Return OTP.
+- Auto-Refund of Security Deposit: Once return inspection passes with 0 damage, the
+  held security deposit is automatically unlocked and refunded to their card/bank.
+- Review & Trust Score: Rate the gear quality and owner reliability (1 to 5 stars).
+
+WHAT THE RENTER CANNOT DO:
+- Cannot view the Admin Command Deck or access Django Admin.
+- Cannot view another owner's payout statements or financial ledgers.
+- Cannot register physical assets or publish gear listings without activating an Owner profile.
+- Cannot release their own security deposit without inspection clearance.
+
+--------------------------------------------------------------------------------
+ROLE 2: EQUIPMENT OWNER / GEAR PARTNER (e.g., rajesh.camera@rentido.com)
+--------------------------------------------------------------------------------
+Who they are:
+Independent videographers, rental houses, drone pilots, and equipment collectors who
+monetize idle high-value gear.
+
+WHAT THE OWNER CAN DO:
+- Access Owner Studio: Dedicated dashboard to manage equipment, listings, and earnings.
+- Physical Asset Registration: Register gear with brand, model, serial number, replacement
+  value, initial condition (Like New, Excellent, Good), and inspection criteria.
+- Publish Marketplace Listings: Set daily rental rates, required security deposit, delivery
+  options (Self-Pickup, Doorstep Delivery), and geographic coverage (city/area/pincode).
+- Monitor Portfolio & Custody: Track which assets are Available, Rented, In-Transit,
+  or Under Inspection.
+- View Earnings & Escrow Ledger: Real-time visibility into credited earnings from completed
+  rentals, active escrow balances, and transaction history.
+- Request Instant Payout: Click 'Request Instant Payout' to disburse cleared earnings
+  instantly into their bank or UPI account via double-entry financial ledger settlement.
+- Dispute Damage Claims: If equipment returns damaged, initiate a formal dispute with
+  inspection photos and repair quotes for Admin arbitration.
+
+WHAT THE OWNER CANNOT DO:
+- Cannot view or manage other owners' gear or private earnings.
+- Cannot access platform-wide administrative controls or bypass inspection requirements.
+- Cannot arbitrate their own disputes; disputes must be settled by an impartial Admin.
+
+--------------------------------------------------------------------------------
+ROLE 3: PLATFORM ADMINISTRATOR / EXECUTIVE (e.g., admin@rentido.com)
+--------------------------------------------------------------------------------
+Who they are:
+Rentido executive operations, finance, and legal officers managing the platform.
+
+WHAT THE ADMIN CAN DO:
+- Access Executive Command Deck: High-level overview of Gross Merchandise Value (GMV),
+  platform revenue, commission cuts, active rentals, and held escrow funds.
+- Escrow Ledger Audit: Real-time oversight into all double-entry ledger entries
+  (ESCROW_INFLOW, OWNER_PAYABLE, PLATFORM_REVENUE, SECURITY_DEPOSIT_ESCROW).
+- Direct Django Admin Access (/admin/):
+  * Payments & Ledger: http://127.0.0.1:8000/admin/payments/ledgerentry/
+  * Inspections: http://127.0.0.1:8000/admin/inspections/inspection/
+  * Fleet Dispatches: http://127.0.0.1:8000/admin/logistics/deliveryorder/
+  * Surge Price Rules: http://127.0.0.1:8000/admin/promotions/surgepricingrule/
+  * Physical Assets: http://127.0.0.1:8000/admin/assets/asset/
+- Physical Asset Verification: Review newly listed equipment and approve or reject it.
+- Dispute Arbitration: Settle damage disputes between owners and renters by allocating
+  the held security deposit (e.g., award 3,500 damage compensation to Owner, refund
+  the remaining 1,500 to Renter).
+- Surge Pricing & Promotions: Create dynamic multiplier rules based on city, category,
+  and festival seasons; configure promotional discount coupons and referral rewards.
+- Tamper-Evident Audit Trail: Inspect read-only audit logs (/api/audit-logs/) recording
+  who performed what action, when, and from what IP address.
+
+WHAT THE ADMIN CANNOT DO:
+- Cannot modify past financial ledger entries (all ledger entries are strictly immutable).
+- Cannot delete audit trail records (enforced by database constraints).
+
+--------------------------------------------------------------------------------
+ROLE 4: QUALITY & TECHNICAL INSPECTOR (e.g., priya.tech@rentido.com)
+--------------------------------------------------------------------------------
+Who they are:
+Certified camera technicians, drone mechanics, and electronics specialists.
+
+WHAT THE INSPECTOR CAN DO:
+- Pre-Dispatch Technical Inspection: Before delivery, check optical alignment, sensor dust,
+  shutter count, battery cycles, drone motor health, and mark inspection checklist.
+- Post-Return Technical Inspection: Check returning gear for scratches, water damage,
+  fungus, cracked glass, or missing accessories.
+- Issue Quality Certifications: Certify gear as 'LIKE_NEW', 'EXCELLENT', or 'GOOD' to
+  display verified badges on marketplace cards.
+- File Damage Assessment Reports: If gear is returned defective, itemize repair costs
+  and upload photographic evidence to feed directly into the Admin Dispute Arbitration engine.
+
+--------------------------------------------------------------------------------
+ROLE 5: LOGISTICS & FLEET DELIVERY DRIVER (e.g., arun.driver@rentido.com)
+--------------------------------------------------------------------------------
+Who they are:
+Trained logistics personnel handling specialized, shock-proof transport of fragile gear.
+
+WHAT THE DRIVER CAN DO:
+- View Assigned Dispatches: See scheduled pickup and delivery routes with asset details.
+- Owner Pickup Verification: Collect gear from owner, verifying physical bag/case seals.
+- Doorstep Handover via OTP: Deliver gear to renter and require the renter to provide the
+  6-digit Handover OTP. Entering this OTP in the system officially transfers custody.
+- Return Collection via OTP: Collect gear from renter at rental completion and verify Return OTP.
+- Incident Reporting: Report transit delays, road accidents, or security seal tampering.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+4. END-TO-END RENTAL LIFECYCLE: WHAT HAPPENS ON EVERY ACTION
+================================================================================
+
+Here is the exact step-by-step lifecycle of an equipment rental in Rentido:
+
+--------------------------------------------------------------------------------
+STEP 1: AUTHENTICATION & ROLE PROVISIONING
+--------------------------------------------------------------------------------
+Action: User clicks 'Sign In / Register' in the top navbar and enters email & password.
+Behind the Scenes:
+1. Frontend calls POST /api/auth/login/.
+2. Django verifies credentials and returns a SimpleJWT access token (7-day lifetime)
+   and a refresh token (30-day lifetime).
+3. Tokens are stored in browser localStorage.
+4. User role profile (is_owner, is_admin, is_inspector, is_driver) determines visible
+   nav buttons and authorized modals.
+5. If the access token expires during a session, the frontend automatically calls
+   POST /api/auth/token/refresh/ in the background without interrupting the user.
+
+--------------------------------------------------------------------------------
+STEP 2: ASSET REGISTRATION & LISTING PUBLICATION
+--------------------------------------------------------------------------------
+Action: Owner opens 'Owner Studio', fills equipment specs, and clicks 'Publish Listing'.
+Behind the Scenes:
+1. Physical Asset Created: POST /api/assets/ records the hardware (Brand: Sony, Model: FX3,
+   Serial: SN-FX3-9942, Replacement Value: 350000, Condition: LIKE_NEW).
+2. Listing Created: POST /api/listings/ binds the asset to marketplace terms (Daily Rent: 2500,
+   Security Deposit: 15000, City: Bangalore, Area: Indiranagar).
+3. The listing is immediately published to the live marketplace catalog.
+
+--------------------------------------------------------------------------------
+STEP 3: CATALOG DISCOVERY, SEARCH & CATEGORY FILTERING
+--------------------------------------------------------------------------------
+Action: Renter browses equipment cards on the homepage, clicks a category tile
+(e.g., 'Cameras & Optics'), or searches 'Sony FX3'.
+Behind the Scenes:
+1. Category Filtering: The UI checks category slugs ('cameras-optics', 'drones-aerial',
+   'laptops-workstations', 'audio-recording', 'lighting-grip', 'gaming-vr') against listing data.
+2. Tokenized Multi-Word Matching: The search algorithm splits queries into words and matches
+   all tokens against item titles and descriptions.
+3. Smooth Auto-Scroll: The viewport smoothly navigates down to the #marketplace-listings grid.
+4. Guaranteed Condition Badges: Listings display verified condition badges (Like New, Excellent)
+   and owner trust scores.
+
+--------------------------------------------------------------------------------
+STEP 4: DYNAMIC PRICE COMPUTATION & COUPON VALIDATION
+--------------------------------------------------------------------------------
+Action: Renter selects rental dates (e.g., 3 days) and enters coupon code 'SAVE20'.
+Behind the Scenes:
+1. Formula:
+   Base Rent = Daily Rate * Days (e.g. 2500 * 3 = 7500)
+   Surge Multiplier = Applied from active SurgePricingRule (e.g. 1.0x standard, 1.25x peak)
+   Coupon Discount = Validated via POST /api/coupons/validate/ (e.g. 20% off base rent = -1500)
+   Platform Fee = 10% commission on base rent (e.g. 600)
+   Delivery Fee = 300 (or 0 for self-pickup)
+   Security Deposit = 15000 (100% refundable escrow holding)
+   Total Amount Paid = Rent + Fees + Deposit (e.g. 6000 + 600 + 300 + 15000 = 21900)
+   Owner Payout = Rent - Platform Fee (e.g. 5400)
+2. Live breakdown is rendered transparently on the rental drawer before checkout.
+
+--------------------------------------------------------------------------------
+STEP 5: BOOKING & DOUBLE-ENTRY ESCROW LOCK
+--------------------------------------------------------------------------------
+Action: Renter confirms booking and clicks 'Pay & Lock Escrow'.
+Behind the Scenes:
+1. Payment Processed: Payment gateway (Razorpay / Stripe simulation) captures 21900.
+2. Rental State: Rental created in status PENDING_CONFIRMATION or CONFIRMED.
+3. SecurityDeposit Record Created: 15000 isolated with status HELD.
+4. Double-Entry Ledger Created:
+   - Debit: RENTER_BANK_ACCOUNT 21900
+   - Credit: ESCROW_INFLOW 21900
+   - Debit: ESCROW_INFLOW 15000
+   - Credit: SECURITY_DEPOSIT_ESCROW 15000
+   Money is safely locked in the platform escrow vault. The owner cannot touch the funds yet.
+
+--------------------------------------------------------------------------------
+STEP 6: PRE-DISPATCH INSPECTION & HANDOVER OTP VERIFICATION
+--------------------------------------------------------------------------------
+Action: Gear is packed, driver arrives at renter's location, renter verifies gear and gives OTP.
+Behind the Scenes:
+1. Pre-Rental Inspection: Technician confirms sensor is clean and lenses are pristine.
+2. Handover OTP Generated: 6-digit cryptographic PIN generated on the rental.
+3. Handover Execution: Driver enters OTP into POST /api/rentals/{id}/verify-handover-otp/.
+4. Custody Transfer: Rental status officially becomes ACTIVE.
+5. Inflow Crediting:
+   - Debit: ESCROW_INFLOW 5400
+   - Credit: OWNER_PAYABLE 5400 (Owner's earnings now credited as a pending liability!)
+   - Debit: ESCROW_INFLOW 1500
+   - Credit: PLATFORM_REVENUE 1500 (Rentido earns platform commission!)
+
+--------------------------------------------------------------------------------
+STEP 7: RENTAL IN-USE & RENTAL EXTENSION
+--------------------------------------------------------------------------------
+Action: Renter uses the equipment. Renter realizes they need 2 additional shoot days.
+Behind the Scenes:
+1. Renter clicks 'Request Extension' via POST /api/rentals/{id}/extend/.
+2. Platform calculates prorated rental for +2 days.
+3. Renter authorizes additional payment.
+4. Rental end_datetime is updated, and extra revenue is credited to owner payable.
+
+--------------------------------------------------------------------------------
+STEP 8: RETURN COLLECTION & RETURN OTP VERIFICATION
+--------------------------------------------------------------------------------
+Action: Shoot finishes, driver picks up gear from renter, renter provides Return OTP.
+Behind the Scenes:
+1. Return OTP Generated: Renter views 6-digit Return OTP in their rental dashboard.
+2. Driver enters OTP into POST /api/rentals/{id}/verify-return-otp/.
+3. Custody Transfer: Rental status moves from ACTIVE to RETURNED. Gear moves to inspection facility.
+
+--------------------------------------------------------------------------------
+STEP 9: POST-RETURN INSPECTION & FINANCIAL SETTLEMENT SCENARIOS
+--------------------------------------------------------------------------------
+Action: Certified inspector checks the returned gear.
+
+SCENARIO A: CLEAN RETURN (NO DAMAGE)
+1. Inspector signs off checklist with condition 'EXCELLENT, NO DEFECTS'.
+2. Security Deposit Status moves from HELD to REFUNDED.
+3. Double-Entry Ledger Entry:
+   - Debit: SECURITY_DEPOSIT_ESCROW 15000
+   - Credit: RENTER_BANK_ACCOUNT 15000 (100% of deposit returned to renter!)
+4. Owner payable balance (5400) is officially cleared and ready for withdrawal.
+
+SCENARIO B: DAMAGED RETURN (DISPUTE & ARBITRATION)
+1. Inspector detects cracked front lens element, uploads photo, estimates 4000 repair cost.
+2. Owner or Inspector files damage claim. Rental moves to DISPUTED.
+3. Admin reviews evidence in Admin Command Deck under Arbitrate Dispute.
+4. Admin executes POST /api/admin-ops/arbitrate-dispute/:
+   - Deduct 4000 damage compensation to Owner.
+   - Refund remaining 11000 to Renter.
+5. Double-Entry Ledger Entry:
+   - Debit: SECURITY_DEPOSIT_ESCROW 4000 -> Credit: OWNER_PAYABLE 4000
+   - Debit: SECURITY_DEPOSIT_ESCROW 11000 -> Credit: RENTER_BANK_ACCOUNT 11000
+6. Full transparency, zero physical conflict between parties.
+
+--------------------------------------------------------------------------------
+STEP 10: OWNER INSTANT PAYOUT & DOUBLE-ENTRY DISBURSE
+--------------------------------------------------------------------------------
+Action: Owner opens 'Owner Studio' -> 'Earnings & Payouts' -> clicks 'Request Instant Payout'.
+Behind the Scenes:
+1. Frontend calls POST /api/ledger/request-payout/.
+2. Backend computes:
+   Available Payout = Sum(OWNER_PAYABLE_CREDITED) - Sum(OWNER_PAYOUT_SETTLED)
+3. If Available > 0:
+   - Unique payout reference generated: PAYOUT-XXXXXXXX (e.g. PAYOUT-B615B605).
+   - Double-Entry Ledger Entry created:
+     * Debit: OWNER_PAYABLE 5400 (Liability cleared)
+     * Credit: OWNER_BANK_ACCOUNT 5400 (Funds transferred to Owner UPI/Bank)
+     * Rental: Linked to owner's completed rental.
+   - Response returned:
+     {'message': 'Successfully initiated payout of 5400.00', 'reference_id': 'PAYOUT-B615B605'}
+4. Owner Studio displays green confirmation badge with payout reference ID.
+5. Pending payout balance resets to 0.00 and appears in recent ledger statement.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+5. HOW DOUBLE-ENTRY ESCROW ACCOUNTING WORKS (THE FINANCIAL ENGINE)
+================================================================================
+
+Rentido operates on strict GAAP-compliant double-entry ledger bookkeeping.
+Every rupee moving into or out of the platform has a corresponding Debit and Credit.
+
+THE 6 CORE LEDGER ACCOUNTS:
+1. ESCROW_INFLOW: Temporary clearing account holding all inbound renter payments.
+2. SECURITY_DEPOSIT_ESCROW: Segregated escrow account safeguarding renter deposits.
+3. PLATFORM_REVENUE: Rentido's earned commission and service fees.
+4. OWNER_PAYABLE: Platform liability representing cleared money owed to equipment owners.
+5. RENTER_BANK_ACCOUNT: External renter bank / debit / credit card account.
+6. OWNER_BANK_ACCOUNT: External owner bank / UPI payout destination.
+
+DOUBLE-ENTRY TRANSACTION FLOW CHART:
+
+EVENT                      DEBIT ACCOUNT                 CREDIT ACCOUNT
+-----------------------------------------------------------------------------------
+1. Booking Payment         RENTER_BANK_ACCOUNT           ESCROW_INFLOW
+2. Deposit Quarantine      ESCROW_INFLOW                 SECURITY_DEPOSIT_ESCROW
+3. Handover Confirmed      ESCROW_INFLOW                 OWNER_PAYABLE (Owner Revenue)
+                           ESCROW_INFLOW                 PLATFORM_REVENUE (Commission)
+4. Clean Return Settlement SECURITY_DEPOSIT_ESCROW       RENTER_BANK_ACCOUNT (Full Refund)
+5. Dispute Damage Payout   SECURITY_DEPOSIT_ESCROW       OWNER_PAYABLE (Damage Fee)
+                           SECURITY_DEPOSIT_ESCROW       RENTER_BANK_ACCOUNT (Remainder)
+6. Owner Instant Payout    OWNER_PAYABLE                 OWNER_BANK_ACCOUNT (Disbursed)
+
+WHY THIS MATTERS:
+Money can never 'disappear' or be double-spent. An admin or auditor can review the
+LedgerEntry table at any moment to verify that every single rupee is accounted for.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+6. GLOSSARY OF CORE CONCEPTS & SYSTEM TERMS
+================================================================================
+
+- Escrow: A secure financial arrangement where a trusted third party (Rentido's engine)
+  holds funds until contractual conditions (handover, clean return, inspection) are met.
+- Double-Entry Ledger: An accounting method where every financial transaction records
+  both a debit and a credit, ensuring total assets always match total liabilities.
+- Security Deposit: A refundable deposit required to protect against damage, loss, or late
+  return, held safely in escrow during the rental period.
+- Handover OTP: A 6-digit one-time PIN used by the renter to acknowledge receipt of the
+  gear in good working order from the owner or delivery partner.
+- Return OTP: A 6-digit one-time PIN used by the delivery driver or owner to confirm
+  the physical retrieval of the equipment from the renter.
+- Surge Pricing Rule: An automated rule that adjusts equipment daily rental rates by a
+  percentage multiplier (e.g. 1.2x) during peak demand, festivals, or weekend rushes.
+- Vetted Asset: Physical equipment that has undergone serial number registration, replacement
+  value verification, and a certified technical inspection checklist.
+- Trust Score: A dynamic rating (0 to 100) calculated from verified ID, on-time return
+  rate, equipment condition maintenance, and positive community reviews.
+- Dispute Arbitration: The administrative workflow where an Admin examines post-return
+  inspection reports and fairly splits the held security deposit between owner and renter.
+--------------------------------------------------------------------------------
+
+
+================================================================================
+7. HOW TO USE THIS KNOWLEDGE TO EXECUTE THE TESTING GUIDE
+================================================================================
+
+Now that you understand the architecture, roles, and lifecycles, you can follow
+RENTIDO_TESTING_GUIDE_FOR_ALL_USERS.txt with complete confidence:
+
+MAPPING TO TESTING GUIDE PHASES:
+- Phase 1 & 2 in Testing Guide: Sign in as Renter (ananya.renter@rentido.com)
+  -> You are verifying: Catalog search, tokenized keywords, category filtering,
+     pricing breakdown, coupon application, and escrow booking.
+- Phase 3 & 4 in Testing Guide: Sign in as Equipment Owner (rajesh.camera@rentido.com)
+  -> You are verifying: Owner Studio, registering assets with serial numbers, publishing
+     listings with custom deposits, reviewing credited earnings, and clicking
+     'Request Instant Payout' with double-entry ledger verification.
+- Phase 5 in Testing Guide: Sign in as Delivery Driver (arun.driver@rentido.com)
+  -> You are verifying: Handover OTP and Return OTP custody verification workflows.
+- Phase 6 in Testing Guide: Sign in as Technical Inspector (priya.tech@rentido.com)
+  -> You are verifying: Pre-dispatch and post-return condition inspection checklists.
+- Phase 7 in Testing Guide: Sign in as Platform Admin (admin@rentido.com)
+  -> You are verifying: Executive Command Deck, Django Admin direct URLs, Escrow Ledger
+     reconciliation, damage dispute arbitration, and audit trail records.
+
+================================================================================
+END OF KNOWLEDGE BASE DOCUMENT
+================================================================================
