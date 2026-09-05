@@ -25,7 +25,9 @@ interface BookingModalProps {
 export default function BookingModal({ listing, onClose, user, onOpenAuth }: BookingModalProps) {
   if (!listing) return null;
 
-  // Rental duration state (default 2 days)
+  // Rental duration & shoot dates
+  const tomorrowStr = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+  const [startDate, setStartDate] = useState(tomorrowStr);
   const [days, setDays] = useState(2);
   const [fulfillment, setFulfillment] = useState<'SELF_PICKUP' | 'DRIVER_DELIVERY'>('DRIVER_DELIVERY');
   
@@ -61,9 +63,10 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
     setCouponLoading(true);
     setCouponError('');
 
-    const now = new Date();
-    const start = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-    const end = new Date(now.getTime() + (24 + days * 24) * 60 * 60 * 1000).toISOString();
+    const startObj = new Date(`${startDate}T10:00:00.000Z`);
+    const endObj = new Date(startObj.getTime() + days * 24 * 60 * 60 * 1000);
+    const start = startObj.toISOString();
+    const end = endObj.toISOString();
 
     try {
       const res = await validateCoupon(couponInput.trim(), listing.id, start, end);
@@ -108,9 +111,10 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
     setBookingLoading(true);
     setBookingError(null);
 
-    const now = new Date();
-    const start = new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString();
-    const end = new Date(now.getTime() + (24 + days * 24) * 60 * 60 * 1000).toISOString();
+    const startObj = new Date(`${startDate}T10:00:00.000Z`);
+    const endObj = new Date(startObj.getTime() + days * 24 * 60 * 60 * 1000);
+    const start = startObj.toISOString();
+    const end = endObj.toISOString();
 
     try {
       // 1. Create Real Rental Reservation in Django Backend
@@ -145,7 +149,7 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
         returnOtp: returnOtp,
         totalPaid: snapshot ? parseFloat(snapshot.total_amount_paid) : totalPayable,
         depositHeld: snapshot ? parseFloat(snapshot.security_deposit_amount) : deposit,
-        dates: `${days} ${days === 1 ? 'Day' : 'Days'}`,
+        dates: `${startDate} to ${endObj.toISOString().split('T')[0]} (${days} ${days === 1 ? 'Day' : 'Days'})`,
         fulfillment: fulfillment === 'DRIVER_DELIVERY' ? 'Doorstep Delivery' : 'Self Pickup',
         txnId: payRes.transaction_id || `TXN-${rentalId}`
       });
@@ -215,26 +219,43 @@ export default function BookingModal({ listing, onClose, user, onOpenAuth }: Boo
           /* Interactive Booking Form */
           <div className="p-6 space-y-6">
             
-            {/* Duration Selector */}
-            <div>
-              <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
-                Rental Duration
-              </label>
-              <div className="grid grid-cols-4 gap-2">
-                {[1, 2, 3, 7].map((d) => (
-                  <button
-                    key={d}
-                    type="button"
-                    onClick={() => setDays(d)}
-                    className={`py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
-                      days === d 
-                        ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs' 
-                        : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300'
-                    }`}
-                  >
-                    {d} {d === 1 ? 'Day' : 'Days'}
-                  </button>
-                ))}
+            {/* Shoot Dates & Duration Selector */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
+                  Shoot Start Date
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    min={tomorrowStr}
+                    value={startDate}
+                    onChange={(e) => setStartDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-xs font-semibold focus:border-indigo-600 focus:outline-none bg-white text-gray-900 shadow-2xs cursor-pointer"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-2">
+                  Duration ({days} {days === 1 ? 'Day' : 'Days'})
+                </label>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {[1, 2, 3, 7].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDays(d)}
+                      className={`py-2.5 px-1.5 rounded-xl border text-xs font-bold transition-all cursor-pointer text-center ${
+                        days === d 
+                          ? 'bg-indigo-600 border-indigo-600 text-white shadow-xs' 
+                          : 'bg-white border-gray-200 text-gray-700 hover:border-indigo-300'
+                      }`}
+                    >
+                      {d} {d === 1 ? 'Day' : 'Days'}
+                    </button>
+                  ))}
+                </div>
               </div>
             </div>
 

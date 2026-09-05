@@ -1160,6 +1160,42 @@ Verification:
   * Security deposit record created: Deposit ID #1, Total ₹20,000.00, Status `HELD`.
 ================================================================================
 
+================================================================================
+STEP 47: RESOLVE ASSET OVERLAP CONFLICT & ADD SHOOT START DATE PICKER
+================================================================================
+Issue:
+- When booking equipment in the frontend, the server returned:
+  `Asset is already reserved from 2026-09-04 13:24:40.025304+00:00 to 2026-09-07 13:24:40.025304+00:00.`
+
+Root Cause:
+1. Hardcoded Booking Start Date:
+   - In `BookingModal.tsx`, the start datetime was hardcoded to `now + 24 hours` (`2026-09-06`).
+   - The user had no interactive Date Picker to choose when their shoot starts (e.g. choosing
+     a date after existing reservations conclude).
+2. Overlapping Test Rentals & Stale Checkouts:
+   - Early synthetic test rentals created for Rajesh's payout validation on Sep 04 remained in `ACTIVE`
+     status through Sep 07 instead of being marked `COMPLETED`.
+   - `AvailabilityService.check_availability()` treated uncompleted `PAYMENT_PENDING` reservations
+     as active blocks indefinitely, even if abandoned hours or days ago.
+
+Fix Implementation:
+1. Interactive Shoot Start Date Picker (`rentido_frontend/components/BookingModal.tsx`):
+   - Added an interactive `<input type="date">` field with minimum date validation (`min={tomorrow}`).
+   - Positioned alongside the Duration buttons (`1 Day`, `2 Days`, `3 Days`, `7 Days`).
+   - Dynamic start/end calculations now anchor to the selected shoot start date.
+2. Availability Engine Hardening (`rentido_backend/apps/rentals/services/availability.py`):
+   - Excluded abandoned `PAYMENT_PENDING` reservations older than 15 minutes (`created_at < now - 15m`).
+   - Formatted conflict error messages into clean, readable date strings (`%b %d, %Y`) instead of raw ISO timestamps.
+3. Database Cleanup:
+   - Marked completed test rentals #1–#3 as `COMPLETED`.
+   - Cleared stale uncompleted test checkouts #5–#13 as `CANCELLED`.
+
+Verification:
+- Next.js Production Build: PASSED (Compiled in 863ms, 0 errors, TypeScript clean).
+- Django Domain Test Suite: 14 of 14 tests PASS (Rentals, Listings, Payments).
+- Tested date selection in BookingModal: verified custom shoot start date properly submits and passes availability validation.
+================================================================================
+
 
 
 

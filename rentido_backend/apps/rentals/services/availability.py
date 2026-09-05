@@ -32,11 +32,16 @@ class AvailabilityService:
             return False, "Cannot book a rental period starting in the past."
 
         # Find any overlapping rentals for the physical asset
+        # Exclude abandoned PAYMENT_PENDING checkouts older than 15 minutes
+        fifteen_min_ago = now - timezone.timedelta(minutes=15)
         overlapping_rentals = Rental.objects.filter(
             listing__asset=listing.asset,
             status__in=cls.ACTIVE_RENTAL_STATUSES,
             start_datetime__lt=end_datetime,
             end_datetime__gt=start_datetime
+        ).exclude(
+            status=RentalStatus.PAYMENT_PENDING,
+            created_at__lt=fifteen_min_ago
         )
 
         if exclude_rental_id:
@@ -44,7 +49,9 @@ class AvailabilityService:
 
         if overlapping_rentals.exists():
             conflict = overlapping_rentals.first()
-            return False, f"Asset is already reserved from {conflict.start_datetime} to {conflict.end_datetime}."
+            start_str = conflict.start_datetime.strftime('%b %d, %Y')
+            end_str = conflict.end_datetime.strftime('%b %d, %Y')
+            return False, f"Asset is already reserved from {start_str} to {end_str}. Please choose a different date range."
 
         return True, "Asset is available for booking."
 
